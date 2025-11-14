@@ -8,7 +8,6 @@ import { FlightStatistics } from './components/FlightStatistics';
 import { FlightDetailModal } from './components/FlightDetailModal';
 import { PilotManagement } from './components/PilotManagement';
 import { UAVManagement } from './components/UAVManagement';
-import { ExportUtils } from './components/ExportUtils';
 import { ExportPanel } from './components/ExportPanel';
 import { SyncStatusBar } from './components/SyncStatusBar';
 import { Plane, BarChart3, History, Plus, Users, Settings, Home, Menu, ClipboardCheck, Wrench } from 'lucide-react';
@@ -643,10 +642,8 @@ export default function App() {
           </TabsContent>
 
           <TabsContent value="export">
-            <ExportUtils 
-              flights={flights}
-              uavs={uavs}
-              pilots={pilots}
+            <ExportPanel 
+              drones={uavs}
             />
           </TabsContent>
         </Tabs>
