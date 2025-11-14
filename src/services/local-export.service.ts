@@ -43,50 +43,57 @@ export class LocalExportService {
     // UTF-8 BOM
     const BOM = '\uFEFF';
     
-    // ヘッダー行 - 様式1フォーマットに合わせる
+    // ヘッダー行 - 様式1標準フォーマット（バックエンドと同じ）
     const headers = [
+      'No',
       '飛行年月日',
-      '飛行させた者の氏名',
+      '操縦者氏名',
+      '操縦者技能証明番号',
+      '無人航空機の登録記号',
+      '機体名',
+      '飛行目的',
       '飛行概要',
-      '離陸場所',
-      '着陸場所',
-      '離陸時刻',
-      '着陸時刻',
-      '飛行時間（分）',
-      '総飛行時間',
-      '飛行の安全に影響のあった事項',
-      '天気',
-      '機体',
       '特定飛行',
-      '飛行計画通報',
-      '案件名・クライアント'
+      '飛行計画の通報',
+      '離陸場所',
+      '離陸時刻',
+      '着陸場所',
+      '着陸時刻',
+      '飛行時間(分)',
+      '総飛行時間(時間)',
+      '飛行の安全に影響のあった事項',
+      '不具合発生日',
+      '不具合事項',
+      '処置実施日',
+      '処置内容',
+      '確認者氏名',
     ].join(',');
 
-    // 総飛行時間を計算（累積）
-    let totalFlightMinutes = 0;
-
     // データ行
-    const rows = flights.map((flight) => {
-      // 累積飛行時間を計算
-      totalFlightMinutes += flight.duration || 0;
-      const totalFlightHours = (totalFlightMinutes / 60).toFixed(1);
-
+    const rows = flights.map((flight, index) => {
       return [
-        this.formatDate(flight.date),
-        this.escapeCSV(flight.pilot),
-        this.escapeCSV(flight.outline), // 🆕 飛行概要（outline字段）
-        this.escapeCSV(flight.location),
-        this.escapeCSV(flight.location), // 離着陸場所が同じ場合
-        flight.takeoffTime || flight.time || '', // 🆕 離陸時刻
-        flight.landingTime || '', // 🆕 着陸時刻
-        flight.duration || '',
-        totalFlightHours, // 🆕 総飛行時間（累積、時間単位）
-        this.escapeCSV(flight.notes), // 🆕 飛行の安全に影響のあった事項
-        this.escapeCSV(flight.weather),
-        this.escapeCSV(flight.droneModel),
-        flight.isTokuteiFlight ? '特定飛行' : '',
-        flight.flightPlanNotified ? '通報済' : '',
-        this.escapeCSV(flight.clientName)
+        index + 1, // No
+        this.formatDate(flight.date), // 飛行年月日
+        this.escapeCSV(flight.pilot), // 操縦者氏名
+        '', // 操縦者技能証明番号（localStorageにはない）
+        '', // 無人航空機の登録記号（localStorageにはない）
+        this.escapeCSV(flight.droneModel), // 機体名
+        this.escapeCSV(flight.purpose), // 飛行目的
+        this.escapeCSV(flight.outline || ''), // 飛行概要
+        flight.isTokuteiFlight ? '○' : '', // 特定飛行
+        flight.flightPlanNotified ? '○' : '', // 飛行計画の通報
+        this.escapeCSV(flight.location), // 離陸場所
+        flight.takeoffTime || flight.time || '', // 離陸時刻
+        this.escapeCSV(flight.location), // 着陸場所（離陸と同じ場合）
+        flight.landingTime || '', // 着陸時刻
+        flight.duration || '', // 飛行時間(分)
+        flight.duration ? (flight.duration / 60).toFixed(1) : '', // 総飛行時間(時間)
+        this.escapeCSV(flight.notes), // 飛行の安全に影響のあった事項
+        '', // 不具合発生日（localStorageにはない）
+        '', // 不具合事項（localStorageにはない）
+        '', // 処置実施日（localStorageにはない）
+        '', // 処置内容（localStorageにはない）
+        '', // 確認者氏名（localStorageにはない）
       ].join(',');
     });
 

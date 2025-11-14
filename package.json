@@ -74,17 +74,14 @@
             "typescript": "^5.7.2",
             "vite": "6.3.5"
       },
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "backend": "tsx backend/src/index.ts",
-    "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev",
-    "prisma:migrate:deploy": "prisma migrate deploy",
-    "prisma:studio": "prisma studio",
-    "prisma:seed": "tsx prisma/seed.ts",
-    "setup": "prisma generate && prisma migrate dev && prisma db seed",
-    "vercel-build": "vite build",
-    "vercel-build-with-db": "prisma generate && prisma migrate deploy && vite build"
-  }
+      "scripts": {
+            "dev": "vite",
+            "build": "vite build",
+            "backend": "tsx backend/src/index.ts",
+            "prisma:generate": "prisma generate",
+            "prisma:migrate": "prisma migrate dev",
+            "prisma:studio": "prisma studio",
+            "prisma:seed": "tsx prisma/seed.ts",
+            "setup": "prisma generate && prisma migrate dev && prisma db seed"
+      }
 }

@@ -274,3 +274,5 @@ const blob = new Blob([bom, csvContent], { type: 'text/csv;charset=utf-8;' });
 - Issue #xxx: ローカルストレージ対応の要望
 - Issue #xxx: オフラインエクスポート機能の実装
 
+
+

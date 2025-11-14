@@ -10,7 +10,7 @@ import { PilotManagement } from './components/PilotManagement';
 import { UAVManagement } from './components/UAVManagement';
 import { ExportPanel } from './components/ExportPanel';
 import { SyncStatusBar } from './components/SyncStatusBar';
-import { Plane, BarChart3, History, Plus, Users, Settings, Home, Menu, ClipboardCheck, Wrench } from 'lucide-react';
+import { Plane, BarChart3, History, Plus, Users, Settings, Home, Menu, ClipboardCheck, Wrench, Clock } from 'lucide-react';
 import type { CreateDailyInspectionDTO } from './types';
 import { syncService } from './services/sync.service';
 import { generateDevToken, showDevAuthInfo } from './utils/devAuth';
@@ -37,6 +37,8 @@ interface Pilot {
   licenseType?: string;
   email?: string;
   phone?: string;
+  initialFlightHours: number; // 登録時の総飛行時間（分）
+  totalFlightHours: number; // 総飛行時間（分）= 初期飛行時間 + アプリ内累計時間
   isActive: boolean;
 }
 
@@ -134,6 +136,8 @@ const mockPilots: Pilot[] = [
     licenseType: '一等無人航空機操縦士',
     email: 'yamada@example.com',
     phone: '090-1234-5678',
+    initialFlightHours: 6000, // 100時間 = 6000分
+    totalFlightHours: 6000,
     isActive: true
   },
   {
@@ -143,12 +147,16 @@ const mockPilots: Pilot[] = [
     licenseType: '二等無人航空機操縦士',
     email: 'tanaka@example.com',
     phone: '090-9876-5432',
+    initialFlightHours: 3000, // 50時間 = 3000分
+    totalFlightHours: 3000,
     isActive: true
   },
   {
     id: '3',
     name: '佐藤次郎',
     licenseType: '二等無人航空機操縦士',
+    initialFlightHours: 1800, // 30時間 = 1800分
+    totalFlightHours: 1800,
     isActive: true
   }
 ];
@@ -192,15 +200,82 @@ const mockUAVs: UAV[] = [
 ];
 
 export default function App() {
-  const [flights, setFlights] = useState<FlightLog[]>(mockFlights);
-  const [pilots, setPilots] = useState<Pilot[]>(mockPilots);
-  const [uavs, setUAVs] = useState<UAV[]>(mockUAVs);
+  // 📦 LocalStorageからデータを読み込み
+  const [flights, setFlights] = useState<FlightLog[]>(() => {
+    const saved = localStorage.getItem('flightLogs');
+    return saved ? JSON.parse(saved) : mockFlights;
+  });
+  
+  const [pilots, setPilots] = useState<Pilot[]>(() => {
+    const saved = localStorage.getItem('pilots');
+    return saved ? JSON.parse(saved) : mockPilots;
+  });
+  
+  const [uavs, setUAVs] = useState<UAV[]>(() => {
+    const saved = localStorage.getItem('uavs');
+    return saved ? JSON.parse(saved) : mockUAVs;
+  });
+  
   const [selectedFlight, setSelectedFlight] = useState<FlightLog | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   
   // 🆕 記録種別（様式1〜3）の管理
   const [recordType, setRecordType] = useState<'style1' | 'style2' | 'style3'>('style1');
+  
+  // 🆕 飛行ステータス管理
+  const [globalFlightStatus, setGlobalFlightStatus] = useState<'ready' | 'started' | 'finished'>('ready');
+  const [globalStartTime, setGlobalStartTime] = useState<Date | null>(null);
+  const [globalEndTime, setGlobalEndTime] = useState<Date | null>(null);
+  const [menuBarElapsedTime, setMenuBarElapsedTime] = useState(0);
+
+  // 🆕 経過時間のフォーマット関数
+  const formatElapsedTime = (seconds: number): string => {
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // 🆕 飛行タイマー更新ハンドラー
+  const handleFlightTimerUpdate = (status: 'ready' | 'started' | 'finished', startTime: Date | null, endTime: Date | null) => {
+    setGlobalFlightStatus(status);
+    setGlobalStartTime(startTime);
+    setGlobalEndTime(endTime);
+  };
+
+  // 🆕 飛行中の経過時間を更新するuseEffect
+  useEffect(() => {
+    if (globalFlightStatus === 'started' && globalStartTime) {
+      const updateElapsedTime = () => {
+        const elapsed = Math.floor((Date.now() - globalStartTime.getTime()) / 1000);
+        setMenuBarElapsedTime(elapsed);
+      };
+      
+      updateElapsedTime();
+      const interval = setInterval(updateElapsedTime, 1000);
+      
+      return () => clearInterval(interval);
+    } else if (globalFlightStatus === 'finished' && globalStartTime && globalEndTime) {
+      const elapsed = Math.floor((globalEndTime.getTime() - globalStartTime.getTime()) / 1000);
+      setMenuBarElapsedTime(elapsed);
+    } else {
+      setMenuBarElapsedTime(0);
+    }
+  }, [globalFlightStatus, globalStartTime, globalEndTime]);
+
+  // 📦 LocalStorageにデータを自動保存
+  useEffect(() => {
+    localStorage.setItem('flightLogs', JSON.stringify(flights));
+  }, [flights]);
+
+  useEffect(() => {
+    localStorage.setItem('pilots', JSON.stringify(pilots));
+  }, [pilots]);
+
+  useEffect(() => {
+    localStorage.setItem('uavs', JSON.stringify(uavs));
+  }, [uavs]);
 
   // 🔧 開発環境用: 認証トークンを自動設定
   useEffect(() => {
@@ -235,6 +310,20 @@ export default function App() {
               hoursSinceLastMaintenance: u.hoursSinceLastMaintenance + flightHours
             }
           : u
+      ));
+    }
+    
+    // 🆕 Update Pilot flight hours
+    const pilot = pilots.find(p => p.name === newFlight.pilot && p.isActive);
+    if (pilot) {
+      const flightMinutes = newFlight.duration; // 分単位
+      setPilots(prev => prev.map(p => 
+        p.id === pilot.id 
+          ? { 
+              ...p, 
+              totalFlightHours: p.totalFlightHours + flightMinutes
+            }
+          : p
       ));
     }
     
@@ -524,6 +613,12 @@ export default function App() {
                 pilots={pilots}
                 uavs={uavs}
                 flights={flights}
+                onAddPilot={handleAddPilot}
+                onAddUAV={handleAddUAV}
+                globalFlightStatus={globalFlightStatus}
+                globalStartTime={globalStartTime}
+                globalEndTime={globalEndTime}
+                onFlightTimerUpdate={handleFlightTimerUpdate}
               />
             )}
 
@@ -643,7 +738,9 @@ export default function App() {
 
           <TabsContent value="export">
             <ExportPanel 
-              drones={uavs}
+              flights={flights}
+              uavs={uavs}
+              pilots={pilots}
             />
           </TabsContent>
         </Tabs>
@@ -651,6 +748,28 @@ export default function App() {
 
       {/* Bottom Navigation Bar */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-blue-200/50 shadow-2xl z-50">
+        {/* 🆕 飞行状态提醒条 */}
+        {globalFlightStatus === 'started' && (
+          <button
+            onClick={() => setActiveTab('add')}
+            className="w-full bg-gradient-to-r from-green-500 via-emerald-500 to-green-600 text-white px-4 py-2.5 flex items-center justify-center gap-3 hover:from-green-600 hover:via-emerald-600 hover:to-green-700 transition-all cursor-pointer active:scale-[0.99] border-b-2 border-green-700"
+          >
+            <div className="flex items-center gap-2">
+              <div className="relative flex items-center justify-center">
+                <div className="w-3 h-3 bg-white rounded-full animate-ping absolute"></div>
+                <div className="w-2 h-2 bg-white rounded-full relative"></div>
+              </div>
+              <span className="font-bold text-sm sm:text-base">🚁 飛行中</span>
+            </div>
+            <div className="flex items-center gap-1.5 bg-white/20 px-3 py-1 rounded-full backdrop-blur-sm">
+              <Clock className="h-4 w-4" />
+              <span className="font-mono font-bold text-base sm:text-lg tabular-nums">
+                {formatElapsedTime(menuBarElapsedTime)}
+              </span>
+            </div>
+            <span className="text-xs opacity-90 hidden sm:inline">タップして詳細を確認</span>
+          </button>
+        )}
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-4 gap-2 h-16 relative px-4">
             {/* Home Button */}
@@ -666,17 +785,17 @@ export default function App() {
               <span className={`text-xs transition-colors ${activeTab === 'overview' ? 'text-blue-800' : 'text-gray-500'}`}>ホーム</span>
             </button>
             
-            {/* Statistics Button */}
+            {/* Flight Log Button */}
             <button
-              onClick={() => setActiveTab('statistics')}
+              onClick={() => setActiveTab('add')}
               className={`relative flex flex-col items-center justify-center gap-1 py-2 rounded-2xl transition-all duration-200 touch-manipulation ${
-                activeTab === 'statistics' 
+                activeTab === 'add' 
                   ? 'bg-blue-50' 
                   : 'hover:bg-blue-50/50'
               }`}
             >
-              <BarChart3 className={`h-6 w-6 transition-colors ${activeTab === 'statistics' ? 'text-blue-700' : 'text-gray-400'}`} />
-              <span className={`text-xs transition-colors ${activeTab === 'statistics' ? 'text-blue-800' : 'text-gray-500'}`}>統計</span>
+              <Plane className={`h-6 w-6 transition-colors ${activeTab === 'add' ? 'text-blue-700' : 'text-gray-400'}`} />
+              <span className={`text-xs transition-colors ${activeTab === 'add' ? 'text-blue-800' : 'text-gray-500'}`}>飛行日誌</span>
             </button>
             
             {/* History Button */}
@@ -705,15 +824,6 @@ export default function App() {
               <span className={`text-xs transition-colors ${(activeTab === 'more' || activeTab === 'management' || activeTab === 'export') ? 'text-blue-800' : 'text-gray-500'}`}>その他</span>
             </button>
 
-            {/* Floating Add Button (FAB) - Centered */}
-            <div className="absolute left-1/2 -translate-x-1/2 -top-10 md:-top-8">
-              <button
-                onClick={() => setActiveTab('add')}
-                className="bg-gradient-to-br from-blue-700 to-blue-600 hover:from-blue-800 hover:to-blue-700 text-white p-5 rounded-full shadow-2xl hover:shadow-blue-600/50 transition-all duration-200 touch-manipulation transform hover:scale-105 active:scale-95 md:p-4"
-              >
-                <Plus className="h-10 w-10 md:h-8 md:w-8" />
-              </button>
-            </div>
           </div>
         </div>
       </nav>
