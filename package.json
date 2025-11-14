@@ -84,6 +84,7 @@
     "prisma:studio": "prisma studio",
     "prisma:seed": "tsx prisma/seed.ts",
     "setup": "prisma generate && prisma migrate dev && prisma db seed",
-    "vercel-build": "prisma generate && prisma migrate deploy && vite build"
+    "vercel-build": "vite build",
+    "vercel-build-with-db": "prisma generate && prisma migrate deploy && vite build"
   }
 }
