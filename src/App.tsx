@@ -9,11 +9,14 @@ import { FlightDetailModal } from './components/FlightDetailModal';
 import { PilotManagement } from './components/PilotManagement';
 import { UAVManagement } from './components/UAVManagement';
 import { ExportPanel } from './components/ExportPanel';
-import { SyncStatusBar } from './components/SyncStatusBar';
+import { OnboardingFlow } from './components/OnboardingFlow';
 import { Plane, BarChart3, History, Plus, Users, Settings, Home, Menu, ClipboardCheck, Wrench, Clock } from 'lucide-react';
 import type { CreateDailyInspectionDTO } from './types';
 import { syncService } from './services/sync.service';
+import { supabaseSyncService } from './services/supabase-sync.service';
 import { generateDevToken, showDevAuthInfo } from './utils/devAuth';
+import { UserMenu } from './components/UserMenu';
+import { useAuth } from './contexts/AuthContext';
 
 interface FlightLog {
   id: string;
@@ -56,177 +59,61 @@ interface UAV {
   isActive: boolean;
 }
 
-// Mock data for demonstration
-const mockFlights: FlightLog[] = [
-  {
-    id: '1',
-    date: '2024-09-24',
-    duration: 45,
-    location: '東京都渋谷区代々木公園',
-    droneModel: 'DJI Mini 3',
-    weather: '晴れ',
-    windSpeed: 2.5,
-    altitude: 120,
-    purpose: '撮影・映像制作',
-    notes: '企業プロモーションビデオの撮影。桜の撮影。風が穏やかで絶好の飛行日和でした。',
-    pilot: '山田太郎',
-    clientName: '株式会社Aマーケティング'
-  },
-  {
-    id: '2',
-    date: '2024-09-22',
-    duration: 30,
-    location: '千葉県千葉市幕張海浜公園',
-    droneModel: 'DJI Air 2S',
-    weather: '曇り',
-    windSpeed: 4.2,
-    altitude: 100,
-    purpose: '撮影・映像制作',
-    notes: '海岸線の空撮。少し風が強かったが問題なく飛行できました。',
-    pilot: '田中花子',
-    clientName: 'B不動産開発'
-  },
-  {
-    id: '3',
-    date: '2024-09-20',
-    duration: 60,
-    location: '神奈川県鎌倉市七里ヶ浜',
-    droneModel: 'DJI Mavic 3',
-    weather: '晴れ',
-    windSpeed: 1.8,
-    altitude: 150,
-    purpose: '練習・訓練',
-    notes: '新しい操縦技術の練習。江ノ島を背景にした撮影も行いました。',
-    pilot: '佐藤次郎'
-  },
-  {
-    id: '4',
-    date: '2024-09-18',
-    duration: 90,
-    location: '大阪府大阪市大阪城公園',
-    droneModel: 'DJI Mavic 3',
-    weather: '晴れ',
-    windSpeed: 3.1,
-    altitude: 130,
-    purpose: '点検・調査',
-    notes: '建設現場の進捗確認のための空撮。',
-    pilot: '山田太郎',
-    clientName: 'C建設株式会社'
-  },
-  {
-    id: '5',
-    date: '2024-09-15',
-    duration: 25,
-    location: '愛知県名古屋市名城公園',
-    droneModel: 'DJI Air 2S',
-    weather: '曇り',
-    windSpeed: 2.8,
-    altitude: 80,
-    purpose: '趣味・娯楽',
-    notes: '個人的な撮影練習。',
-    pilot: '田中花子'
-  }
-];
-
-const mockPilots: Pilot[] = [
-  {
-    id: '1',
-    name: '山田太郎',
-    licenseNumber: '123456789',
-    licenseType: '一等無人航空機操縦士',
-    email: 'yamada@example.com',
-    phone: '090-1234-5678',
-    initialFlightHours: 6000, // 100時間 = 6000分
-    totalFlightHours: 6000,
-    isActive: true
-  },
-  {
-    id: '2',
-    name: '田中花子',
-    licenseNumber: '987654321',
-    licenseType: '二等無人航空機操縦士',
-    email: 'tanaka@example.com',
-    phone: '090-9876-5432',
-    initialFlightHours: 3000, // 50時間 = 3000分
-    totalFlightHours: 3000,
-    isActive: true
-  },
-  {
-    id: '3',
-    name: '佐藤次郎',
-    licenseType: '二等無人航空機操縦士',
-    initialFlightHours: 1800, // 30時間 = 1800分
-    totalFlightHours: 1800,
-    isActive: true
-  }
-];
-
-const mockUAVs: UAV[] = [
-  {
-    id: '1',
-    nickname: 'メイン機体',
-    registrationId: 'JA001D',
-    manufacturer: 'DJI',
-    model: 'Mini 3',
-    category: 'uncertified',
-    totalFlightHours: 15.5,
-    hoursSinceLastMaintenance: 8.2,
-    isActive: true
-  },
-  {
-    id: '2',
-    nickname: '撮影用機体',
-    registrationId: 'JA002D',
-    manufacturer: 'DJI',
-    model: 'Air 2S',
-    category: 'certified',
-    certificationNumber: 'TC-001',
-    certificationDate: '2023-01-15',
-    totalFlightHours: 32.1,
-    hoursSinceLastMaintenance: 18.7,
-    isActive: true
-  },
-  {
-    id: '3',
-    nickname: '練習機体',
-    manufacturer: 'DJI',
-    model: 'Mavic 3',
-    category: 'certified',
-    certificationNumber: 'TC-002',
-    totalFlightHours: 45.3,
-    hoursSinceLastMaintenance: 22.1,
-    isActive: true
-  }
-];
+// Mock data removed - 新規ユーザーには示例データを表示しない
 
 export default function App() {
-  // 📦 LocalStorageからデータを読み込み
-  const [flights, setFlights] = useState<FlightLog[]>(() => {
-    const saved = localStorage.getItem('flightLogs');
-    return saved ? JSON.parse(saved) : mockFlights;
-  });
+  // 🔐 认证状态
+  const { user, isAuthenticated } = useAuth();
   
-  const [pilots, setPilots] = useState<Pilot[]>(() => {
-    const saved = localStorage.getItem('pilots');
-    return saved ? JSON.parse(saved) : mockPilots;
-  });
-  
-  const [uavs, setUAVs] = useState<UAV[]>(() => {
-    const saved = localStorage.getItem('uavs');
-    return saved ? JSON.parse(saved) : mockUAVs;
-  });
+  // 🔄 Supabase + 离线优先数据加载
+  const [flights, setFlights] = useState<FlightLog[]>([]);
+  const [pilots, setPilots] = useState<Pilot[]>([]);
+  const [uavs, setUAVs] = useState<UAV[]>([]);
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<'online' | 'offline' | 'syncing'>('offline');
   
   const [selectedFlight, setSelectedFlight] = useState<FlightLog | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   
+  // 🆕 首次使用引导流程
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  
   // 🆕 記録種別（様式1〜3）の管理
   const [recordType, setRecordType] = useState<'style1' | 'style2' | 'style3'>('style1');
   
-  // 🆕 飛行ステータス管理
-  const [globalFlightStatus, setGlobalFlightStatus] = useState<'ready' | 'started' | 'finished'>('ready');
-  const [globalStartTime, setGlobalStartTime] = useState<Date | null>(null);
-  const [globalEndTime, setGlobalEndTime] = useState<Date | null>(null);
+  // 🆕 飛行ステータス管理（localStorage に保存して刷新後も維持）
+  const [globalFlightStatus, setGlobalFlightStatus] = useState<'ready' | 'started' | 'finished'>(() => {
+    const saved = localStorage.getItem('flightTimerStatus');
+    const status = saved ? JSON.parse(saved) : 'ready';
+    console.log('🔄 App初期化: flightTimerStatus復元', status);
+    return status;
+  });
+  
+  const [globalStartTime, setGlobalStartTime] = useState<Date | null>(() => {
+    const saved = localStorage.getItem('flightTimerStartTime');
+    if (saved) {
+      const timeStr = JSON.parse(saved);
+      const date = timeStr ? new Date(timeStr) : null;
+      console.log('🔄 App初期化: startTime復元', date);
+      return date;
+    }
+    console.log('🔄 App初期化: startTime復元', null);
+    return null;
+  });
+  
+  const [globalEndTime, setGlobalEndTime] = useState<Date | null>(() => {
+    const saved = localStorage.getItem('flightTimerEndTime');
+    if (saved) {
+      const timeStr = JSON.parse(saved);
+      const date = timeStr ? new Date(timeStr) : null;
+      console.log('🔄 App初期化: endTime復元', date);
+      return date;
+    }
+    console.log('🔄 App初期化: endTime復元', null);
+    return null;
+  });
+  
   const [menuBarElapsedTime, setMenuBarElapsedTime] = useState(0);
 
   // 🆕 経過時間のフォーマット関数
@@ -239,6 +126,7 @@ export default function App() {
 
   // 🆕 飛行タイマー更新ハンドラー
   const handleFlightTimerUpdate = (status: 'ready' | 'started' | 'finished', startTime: Date | null, endTime: Date | null) => {
+    console.log('⏱️ handleFlightTimerUpdate:', { status, startTime, endTime });
     setGlobalFlightStatus(status);
     setGlobalStartTime(startTime);
     setGlobalEndTime(endTime);
@@ -264,18 +152,114 @@ export default function App() {
     }
   }, [globalFlightStatus, globalStartTime, globalEndTime]);
 
-  // 📦 LocalStorageにデータを自動保存
+  // 🚀 初始化 Supabase 同步服务
   useEffect(() => {
-    localStorage.setItem('flightLogs', JSON.stringify(flights));
-  }, [flights]);
+    const initializeApp = async () => {
+      try {
+        console.log('🚀 初始化应用...');
+        
+        // 初始化同步服务
+        await supabaseSyncService.init();
+        console.log('✅ 同步服务初始化完成');
+        
+        // 监听同步状态变化
+        const unsubscribe = supabaseSyncService.onStatusChange((status) => {
+          console.log('📡 同步状态:', status);
+          setSyncStatus(status);
+        });
+        
+        // 加载数据（离线优先）
+        await loadData();
+        
+        return () => {
+          unsubscribe();
+        };
+      } catch (error) {
+        console.error('❌ 应用初始化失败:', error);
+        // 降级到本地存储
+        loadFromLocalStorage();
+      }
+    };
+    
+    initializeApp();
+  }, []);
+  
+  // 📥 从 Supabase/IndexedDB 加载数据
+  const loadData = async () => {
+    try {
+      console.log('📥 加载数据...');
+      
+      const [flightsData, pilotsData, uavsData] = await Promise.all([
+        supabaseSyncService.getFlightLogs(),
+        supabaseSyncService.getPilots(),
+        supabaseSyncService.getUAVs(),
+      ]);
+      
+      // 直接使用实际数据，不使用示例数据
+      setFlights(flightsData);
+      setPilots(pilotsData);
+      setUAVs(uavsData);
+      
+      setIsDataLoaded(true);
+      console.log('✅ 数据加载完成:', {
+        flights: flightsData.length,
+        pilots: pilotsData.length,
+        uavs: uavsData.length,
+      });
+      
+      // 检查是否需要显示首次使用引导
+      const needsOnboarding = pilotsData.length === 0 && uavsData.length === 0;
+      if (needsOnboarding) {
+        console.log('🎯 首次使用，显示引导流程');
+        setShowOnboarding(true);
+      }
+    } catch (error) {
+      console.error('❌ 数据加载失败:', error);
+      loadFromLocalStorage();
+    }
+  };
+  
+  // 📦 降级：从 LocalStorage 加载（向后兼容）
+  const loadFromLocalStorage = () => {
+    console.log('📦 从 localStorage 加载数据（降级模式）');
+    const savedFlights = localStorage.getItem('flightLogs');
+    const savedPilots = localStorage.getItem('pilots');
+    const savedUAVs = localStorage.getItem('uavs');
+    
+    // 直接使用实际数据，不使用示例数据
+    const pilotsData = savedPilots ? JSON.parse(savedPilots) : [];
+    const uavsData = savedUAVs ? JSON.parse(savedUAVs) : [];
+    
+    setFlights(savedFlights ? JSON.parse(savedFlights) : []);
+    setPilots(pilotsData);
+    setUAVs(uavsData);
+    setIsDataLoaded(true);
+    
+    // 检查是否需要显示首次使用引导
+    const needsOnboarding = pilotsData.length === 0 && uavsData.length === 0;
+    if (needsOnboarding) {
+      console.log('🎯 首次使用，显示引导流程');
+      setShowOnboarding(true);
+    }
+  };
+
+  // 💾 飛行タイマー状態を localStorage に保存
+  useEffect(() => {
+    console.log('💾 localStorage保存: flightTimerStatus =', globalFlightStatus);
+    localStorage.setItem('flightTimerStatus', JSON.stringify(globalFlightStatus));
+  }, [globalFlightStatus]);
 
   useEffect(() => {
-    localStorage.setItem('pilots', JSON.stringify(pilots));
-  }, [pilots]);
+    const value = globalStartTime ? globalStartTime.toISOString() : null;
+    console.log('💾 localStorage保存: flightTimerStartTime =', value);
+    localStorage.setItem('flightTimerStartTime', JSON.stringify(value));
+  }, [globalStartTime]);
 
   useEffect(() => {
-    localStorage.setItem('uavs', JSON.stringify(uavs));
-  }, [uavs]);
+    const value = globalEndTime ? globalEndTime.toISOString() : null;
+    console.log('💾 localStorage保存: flightTimerEndTime =', value);
+    localStorage.setItem('flightTimerEndTime', JSON.stringify(value));
+  }, [globalEndTime]);
 
   // 🔧 開発環境用: 認証トークンを自動設定
   useEffect(() => {
@@ -288,78 +272,123 @@ export default function App() {
     }
   }, []);
 
-  const handleAddFlight = (newFlight: Omit<FlightLog, 'id'>) => {
-    const flight: FlightLog = {
-      ...newFlight,
-      id: Date.now().toString()
-    };
-    setFlights(prev => [flight, ...prev]);
-    
-    // Update UAV flight hours
-    const uav = uavs.find(u => 
-      u.model === newFlight.droneModel || 
-      u.nickname === newFlight.droneModel
-    );
-    if (uav) {
-      const flightHours = newFlight.duration / 60;
-      setUAVs(prev => prev.map(u => 
-        u.id === uav.id 
-          ? { 
-              ...u, 
-              totalFlightHours: u.totalFlightHours + flightHours,
-              hoursSinceLastMaintenance: u.hoursSinceLastMaintenance + flightHours
-            }
-          : u
-      ));
+  const handleAddFlight = async (newFlight: Omit<FlightLog, 'id'>) => {
+    try {
+      // 🔄 使用 Supabase 同步服务保存（离线优先）
+      const flightId = await supabaseSyncService.saveFlightLog(newFlight);
+      console.log('✅ 飞行记录已保存:', flightId);
+      
+      const flight: FlightLog = {
+        ...newFlight,
+        id: flightId
+      };
+      
+      // 更新本地状态（立即显示）
+      setFlights(prev => [flight, ...prev]);
+      
+      // Update UAV flight hours
+      const uav = uavs.find(u => 
+        u.model === newFlight.droneModel || 
+        u.nickname === newFlight.droneModel
+      );
+      if (uav) {
+        const flightHours = newFlight.duration / 60;
+        const updatedUAV = {
+          ...uav,
+          totalFlightHours: uav.totalFlightHours + flightHours,
+          hoursSinceLastMaintenance: uav.hoursSinceLastMaintenance + flightHours
+        };
+        setUAVs(prev => prev.map(u => u.id === uav.id ? updatedUAV : u));
+        // 同步到云端
+        await supabaseSyncService.saveUAV(updatedUAV);
+      }
+      
+      // 🆕 Update Pilot flight hours
+      const pilot = pilots.find(p => p.name === newFlight.pilot && p.isActive);
+      if (pilot) {
+        const flightMinutes = newFlight.duration; // 分単位
+        const updatedPilot = {
+          ...pilot,
+          totalFlightHours: pilot.totalFlightHours + flightMinutes
+        };
+        setPilots(prev => prev.map(p => p.id === pilot.id ? updatedPilot : p));
+        // 同步到云端
+        await supabaseSyncService.savePilot(updatedPilot);
+      }
+      
+      // 🔄 飛行記録提出後、タイマーをリセット
+      setGlobalFlightStatus('ready');
+      setGlobalStartTime(null);
+      setGlobalEndTime(null);
+      
+      setActiveTab('history');
+    } catch (error) {
+      console.error('❌ 保存飞行记录失败:', error);
+      // 显示错误提示（可选）
+      alert('保存失败，请检查网络连接');
     }
-    
-    // 🆕 Update Pilot flight hours
-    const pilot = pilots.find(p => p.name === newFlight.pilot && p.isActive);
-    if (pilot) {
-      const flightMinutes = newFlight.duration; // 分単位
-      setPilots(prev => prev.map(p => 
-        p.id === pilot.id 
-          ? { 
-              ...p, 
-              totalFlightHours: p.totalFlightHours + flightMinutes
-            }
-          : p
-      ));
+  };
+
+  const handleAddPilot = async (newPilot: Omit<Pilot, 'id'>) => {
+    try {
+      const pilotId = await supabaseSyncService.savePilot(newPilot);
+      const pilot: Pilot = { ...newPilot, id: pilotId };
+      setPilots(prev => [...prev, pilot]);
+      console.log('✅ 飞行员已保存:', pilotId);
+    } catch (error) {
+      console.error('❌ 保存飞行员失败:', error);
     }
-    
-    setActiveTab('history');
   };
 
-  const handleAddPilot = (newPilot: Omit<Pilot, 'id'>) => {
-    const pilot: Pilot = {
-      ...newPilot,
-      id: Date.now().toString()
-    };
-    setPilots(prev => [...prev, pilot]);
+  const handleUpdatePilot = async (id: string, updates: Partial<Pilot>) => {
+    try {
+      setPilots(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
+      await supabaseSyncService.savePilot({ id, ...updates } as any);
+      console.log('✅ 飞行员已更新:', id);
+    } catch (error) {
+      console.error('❌ 更新飞行员失败:', error);
+    }
   };
 
-  const handleUpdatePilot = (id: string, updates: Partial<Pilot>) => {
-    setPilots(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
+  const handleDeletePilot = async (id: string) => {
+    try {
+      setPilots(prev => prev.map(p => p.id === id ? { ...p, isActive: false } : p));
+      await supabaseSyncService.savePilot({ id, isActive: false } as any);
+      console.log('✅ 飞行员已删除:', id);
+    } catch (error) {
+      console.error('❌ 删除飞行员失败:', error);
+    }
   };
 
-  const handleDeletePilot = (id: string) => {
-    setPilots(prev => prev.map(p => p.id === id ? { ...p, isActive: false } : p));
+  const handleAddUAV = async (newUAV: Omit<UAV, 'id'>) => {
+    try {
+      const uavId = await supabaseSyncService.saveUAV(newUAV);
+      const uav: UAV = { ...newUAV, id: uavId };
+      setUAVs(prev => [...prev, uav]);
+      console.log('✅ 无人机已保存:', uavId);
+    } catch (error) {
+      console.error('❌ 保存无人机失败:', error);
+    }
   };
 
-  const handleAddUAV = (newUAV: Omit<UAV, 'id'>) => {
-    const uav: UAV = {
-      ...newUAV,
-      id: Date.now().toString()
-    };
-    setUAVs(prev => [...prev, uav]);
+  const handleUpdateUAV = async (id: string, updates: Partial<UAV>) => {
+    try {
+      setUAVs(prev => prev.map(u => u.id === id ? { ...u, ...updates } : u));
+      await supabaseSyncService.saveUAV({ id, ...updates } as any);
+      console.log('✅ 无人机已更新:', id);
+    } catch (error) {
+      console.error('❌ 更新无人机失败:', error);
+    }
   };
 
-  const handleUpdateUAV = (id: string, updates: Partial<UAV>) => {
-    setUAVs(prev => prev.map(u => u.id === id ? { ...u, ...updates } : u));
-  };
-
-  const handleDeleteUAV = (id: string) => {
-    setUAVs(prev => prev.map(u => u.id === id ? { ...u, isActive: false } : u));
+  const handleDeleteUAV = async (id: string) => {
+    try {
+      setUAVs(prev => prev.map(u => u.id === id ? { ...u, isActive: false } : u));
+      await supabaseSyncService.saveUAV({ id, isActive: false } as any);
+      console.log('✅ 无人机已删除:', id);
+    } catch (error) {
+      console.error('❌ 删除无人机失败:', error);
+    }
   };
 
   const handleViewFlight = (flight: FlightLog) => {
@@ -410,11 +439,34 @@ export default function App() {
     }
   };
 
+  // 🆕 首次使用引导完成处理
+  const handleOnboardingComplete = async (pilot: Omit<Pilot, 'id'>, uav: Omit<UAV, 'id'>) => {
+    try {
+      console.log('📝 保存首次设置数据...', { pilot, uav });
+      
+      // 保存操纵士
+      const pilotId = await supabaseSyncService.savePilot(pilot);
+      const newPilot: Pilot = { ...pilot, id: pilotId };
+      setPilots([newPilot]);
+      
+      // 保存飞机
+      const uavId = await supabaseSyncService.saveUAV(uav);
+      const newUAV: UAV = { ...uav, id: uavId };
+      setUAVs([newUAV]);
+      
+      // 关闭引导流程
+      setShowOnboarding(false);
+      
+      console.log('✅ 首次设置完成！');
+      alert('✅ 設定完了！これで飛行記録を作成できます。');
+    } catch (error) {
+      console.error('❌ 首次设置失败:', error);
+      alert('❌ 保存に失敗しました。もう一度お試しください。');
+    }
+  };
+
   return (
     <div className="min-h-screen pb-20">
-      {/* 🆕 同期ステータスバー */}
-      <SyncStatusBar />
-      
       {/* Header */}
       <header className="bg-white/90 backdrop-blur-lg shadow-sm border-b border-blue-200/30 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -428,10 +480,14 @@ export default function App() {
                 <p className="text-xs text-blue-700 hidden sm:block">SoraLog - 無人航空機日誌</p>
               </div>
             </div>
-            <div className="flex items-center gap-2 text-xs px-3 py-1.5 bg-gradient-to-br from-blue-100 to-blue-50 text-blue-800 rounded-full border border-blue-200/50">
-              <BarChart3 className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">総フライト:</span>
-              <span>{flights.length}回</span>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="hidden md:flex items-center gap-1.5 text-xs px-2.5 py-1.5 bg-gradient-to-br from-blue-100 to-blue-50 text-blue-800 rounded-full border border-blue-200/50">
+                <BarChart3 className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">総フライト:</span>
+                <span className="font-medium">{flights.length}回</span>
+              </div>
+              {/* 用户菜单（包含同步状态） */}
+              <UserMenu syncStatus={syncStatus} />
             </div>
           </div>
         </div>
@@ -833,6 +889,12 @@ export default function App() {
         flight={selectedFlight}
         isOpen={isDetailModalOpen}
         onClose={handleCloseModal}
+      />
+
+      {/* 🆕 首次使用引导流程 */}
+      <OnboardingFlow
+        isOpen={showOnboarding}
+        onComplete={handleOnboardingComplete}
       />
     </div>
   );

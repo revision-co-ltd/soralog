@@ -1,107 +1,75 @@
 # 🚁 ソラログ (SoraLog)
 
-**無人航空機日誌システム | 国土交通省様式完全対応 | オフライン優先 | モバイル最適化**
+**無人航空機日誌システム | 国土交通省様式完全対応 | クラウド同期 | オフライン優先**
 
-[![Version](https://img.shields.io/badge/version-1.0.0--beta-blue.svg)](https://github.com/your-repo)
+[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/your-repo)
 [![TypeScript](https://img.shields.io/badge/TypeScript-100%25-blue)](https://www.typescriptlang.org/)
+[![Supabase](https://img.shields.io/badge/Supabase-Ready-green)](https://supabase.com/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
-
-<div align="center">
-  <img src="https://via.placeholder.com/800x400/4A90E2/FFFFFF?text=Drone+Log+System" alt="Screenshot" />
-</div>
 
 ---
 
 ## 🎯 概要
 
-**ソラログ (SoraLog)** は、国土交通省が定める無人航空機の飛行日誌管理システム。様式1〜3に完全対応し、CSV/Excel/PDF導出（横版A4）、オフライン動作、モバイル最適化を実現。
+**ソラログ (SoraLog)** は、国土交通省が定める無人航空機の飛行日誌管理システム。Supabase をバックエンドとした、クラウド同期・オフライン優先・多デバイス対応の次世代アプリケーションです。
 
 ### 主要機能
 
-✅ **様式1**: 飛行記録（15フィールド、飛行時間自動計算）  
-✅ **様式2**: 日常点検記録（13項目チェックリスト）  
-✅ **様式3**: 点検整備記録（作業テンプレート）  
-✅ **オフライン対応**: IndexedDB + 自動同期  
-✅ **導出機能**: CSV/Excel/PDF（横版A4）  
-✅ **モバイル最適化**: タッチフレンドリーUI  
+✅ **飛行記録管理** - 飛行時間自動計算、地図選択、詳細記録  
+✅ **操縦者管理** - 飛行時間追跡、資格情報管理  
+✅ **機体管理** - 複数機体登録、飛行時間記録  
+✅ **完全オフライン対応** - ネットなしでも動作、自動同期  
+✅ **クラウド同期** - 多デバイス間でデータ自動同期  
+✅ **データ完全隔離** - ユーザーごとにデータ分離、セキュア  
+✅ **CSV/Excel/PDF 導出** - データ分析・印刷対応  
+✅ **モバイル最適化** - タッチフレンドリー UI  
 
 ---
 
-## 🚀 クイックスタート
+## 🚀 5分でスタート
 
-### 1. 環境チェック
+### 必要なもの
+
+- Node.js 18+ / npm
+- モダンブラウザ（Chrome/Firefox/Safari/Edge）
+- Supabase アカウント（無料）
+
+### ステップ 1: Supabase セットアップ
+
+1. **Supabase プロジェクト作成**  
+   → https://supabase.com で新規プロジェクト作成
+
+2. **データベース構築**  
+   → SQL Editor で `supabase-migration.sql` を実行
+
+3. **環境変数設定**  
+   プロジェクトルートに `.env` ファイルを作成：
+
 ```bash
-npm run check
+VITE_SUPABASE_URL=your-project-url
+VITE_SUPABASE_ANON_KEY=your-anon-key
 ```
 
-### 2. セットアップ
+詳細は → **[QUICK-START-SUPABASE.md](QUICK-START-SUPABASE.md)** 📘
+
+### ステップ 2: アプリ起動
+
 ```bash
-# Docker起動（PostgreSQL）
-docker-compose up -d
+# 依存パッケージインストール
+npm install
 
-# データベース初期化
-npm run setup
-```
-
-### 3. 起動
-```bash
-# ターミナル1: バックエンド
-npm run backend
-
-# ターミナル2: フロントエンド
+# 開発サーバー起動
 npm run dev
 ```
 
-### 4. アクセス
-- **フロントエンド**: http://localhost:5173
-- **バックエンドAPI**: http://localhost:3000/api
-- **データベース管理**: `npm run prisma:studio`
+ブラウザで http://localhost:5173 を開く → **完成！** 🎉
 
-### 5. ログイン
-```
-Email: admin@example.com
-Password: password123
-```
+### ステップ 3: アカウント登録
 
----
-
-## 📊 スクリーンショット
-
-### 様式1: 飛行記録
-<img src="https://via.placeholder.com/600x400/E3F2FD/1976D2?text=Flight+Log+Form" alt="様式1" width="600" />
-
-**特徴**:
-- 15フィールド完全対応
-- 飛行時間自動計算
-- 地図から場所選択
-- 特定飛行フラグ
-
-### 様式2: 日常点検記録
-<img src="https://via.placeholder.com/600x400/E8F5E9/388E3C?text=Daily+Inspection+Form" alt="様式2" width="600" />
-
-**特徴**:
-- 13項目チェックリスト
-- 一括「正常」機能
-- 進捗バー表示
-- 異常時強制備考
-
-### 様式3: 点検整備記録
-<img src="https://via.placeholder.com/600x400/FFF8E1/F57C00?text=Maintenance+Record+Form" alt="様式3" width="600" />
-
-**特徴**:
-- 作業テンプレート（3種類）
-- 実施理由選択（11種類）
-- 総飛行時間自動入力
-- 次回実施予定記録
-
-### 導出機能（横版A4）
-<img src="https://via.placeholder.com/600x400/F3E5F5/7B1FA2?text=Export+Utility" alt="導出" width="600" />
-
-**対応形式**:
-- CSV（BOM付きUTF-8）
-- Excel（罫線付き、色分け）
-- PDF（A4横版、印刷最適化）
+1. 右上の「ログイン」ボタンをクリック
+2. 「新規登録」タブに切り替え
+3. メール・パスワードを入力して登録
+4. すぐに使用開始！
 
 ---
 
@@ -109,35 +77,38 @@ Password: password123
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│                  フロントエンド                     │
-│  React + TypeScript + Tailwind CSS + Radix UI      │
-│  ┌──────────────┐  ┌──────────────┐               │
-│  │  様式1-2-3    │  │  導出機能     │               │
-│  │  フォーム     │  │  CSV/XLSX/PDF │               │
-│  └──────────────┘  └──────────────┘               │
-│  ┌──────────────────────────────────┐             │
-│  │  IndexedDB (オフラインストレージ)  │             │
-│  │  同期サービス (自動/手動)          │             │
-│  └──────────────────────────────────┘             │
+│                フロントエンド                        │
+│      React + TypeScript + Tailwind CSS              │
+│  ┌──────────────────────────────────────────────┐  │
+│  │  飛行記録 │ 操縦者管理 │ 機体管理 │ 統計     │  │
+│  └──────────────────────────────────────────────┘  │
+│  ┌──────────────────────────────────────────────┐  │
+│  │  IndexedDB (離線ストレージ)                   │  │
+│  │  自動同期サービス                              │  │
+│  └──────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────┘
-                         ↕ REST API
+                     ↕ REST API + Auth
 ┌─────────────────────────────────────────────────────┐
-│                  バックエンド                        │
-│  Node.js + Express + TypeScript + Prisma           │
+│                   Supabase                          │
 │  ┌──────────────┐  ┌──────────────┐               │
-│  │  認証 (JWT)   │  │  CRUD API     │               │
+│  │  PostgreSQL  │  │  Auth (JWT)  │               │
+│  │  データベース │  │  ユーザー管理 │               │
 │  └──────────────┘  └──────────────┘               │
-│  ┌─────────────────────────────────────┐          │
-│  │  導出サービス (ExcelJS + Puppeteer)  │          │
-│  └─────────────────────────────────────┘          │
-└─────────────────────────────────────────────────────┘
-                         ↕
-┌─────────────────────────────────────────────────────┐
-│              PostgreSQL データベース                 │
-│  8テーブル: Organization, User, Drone, Location,    │
-│  FlightLog, DailyInspection, MaintenanceRecord      │
+│  ┌──────────────────────────────────────────────┐  │
+│  │  Row Level Security (RLS)                    │  │
+│  │  - ユーザーごとにデータ分離                    │  │
+│  │  - 不正アクセス防止                           │  │
+│  └──────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────┘
 ```
+
+### なぜ Supabase？
+
+- ✅ **開発速度**: バックエンド開発不要、5分で稼働
+- ✅ **セキュリティ**: Row Level Security で完全なデータ分離
+- ✅ **スケーラビリティ**: 自動スケーリング、高可用性
+- ✅ **無料枠**: 個人使用に十分（500MB DB、2GB ストレージ）
+- ✅ **リアルタイム**: 多デバイス同期対応（オプション）
 
 ---
 
@@ -145,57 +116,37 @@ Password: password123
 
 ```
 .
-├── src/                         # フロントエンド
-│   ├── components/
-│   │   ├── FlightLogForm.tsx           # 様式1 (500行)
-│   │   ├── DailyInspectionForm.tsx      # 様式2 (450行)
-│   │   ├── MaintenanceRecordForm.tsx    # 様式3 (300行)
-│   │   ├── ExportUtils.tsx              # 導出UI (280行)
-│   │   ├── SyncStatusBar.tsx            # 同期UI (150行)
-│   │   ├── MapPicker.tsx                # 地図選択 (200行)
-│   │   └── ui/                          # UIコンポーネント
-│   ├── services/
-│   │   ├── storage.service.ts           # IndexedDB (300行)
-│   │   ├── sync.service.ts              # 同期 (250行)
-│   │   └── api.service.ts               # API (600行)
+├── src/                           # フロントエンドコード
+│   ├── components/                # UIコンポーネント
+│   │   ├── AuthModal.tsx          # 認証モーダル
+│   │   ├── UserMenu.tsx           # ユーザーメニュー
+│   │   ├── FlightLogForm.tsx      # 飛行記録フォーム
+│   │   ├── PilotManagement.tsx    # 操縦者管理
+│   │   ├── UAVManagement.tsx      # 機体管理
+│   │   ├── FlightHistory.tsx      # 飛行履歴
+│   │   ├── FlightStatistics.tsx   # 統計表示
+│   │   ├── ExportPanel.tsx        # データ導出
+│   │   ├── MapPicker.tsx          # 地図選択
+│   │   └── ui/                    # 再利用UIコンポーネント
+│   ├── contexts/
+│   │   └── AuthContext.tsx        # 認証コンテキスト
+│   ├── services/                  # サービス層
+│   │   ├── supabase.service.ts    # Supabase クライアント
+│   │   ├── supabase-sync.service.ts # 同期サービス
+│   │   ├── storage.service.ts     # IndexedDB
+│   │   └── local-export.service.ts # CSV/Excel/PDF 導出
 │   ├── types/
-│   │   └── index.ts                     # 型定義 (400行)
-│   └── App.tsx                          # メインアプリ (700行)
+│   │   └── index.ts               # TypeScript 型定義
+│   └── App.tsx                    # メインアプリ
 │
-├── backend/                     # バックエンド
-│   └── src/
-│       ├── services/
-│       │   └── export.service.ts        # 導出 (900行)
-│       ├── controllers/                 # 8モジュール
-│       │   ├── auth.controller.ts
-│       │   ├── flight-log.controller.ts
-│       │   ├── daily-inspection.controller.ts
-│       │   ├── maintenance-record.controller.ts
-│       │   ├── export.controller.ts
-│       │   ├── drone.controller.ts
-│       │   ├── user.controller.ts
-│       │   └── location.controller.ts
-│       ├── routes/                      # 8ルート
-│       ├── middlewares/                 # 認証・検証
-│       ├── utils/                       # ユーティリティ
-│       └── index.ts                     # エントリーポイント
+├── docs/                          # ドキュメント
+│   ├── QUICK-START-SUPABASE.md    # 🔥 5分スタートガイド
+│   ├── SUPABASE-SETUP.md          # 詳細セットアップ
+│   └── SUPABASE-MIGRATION-SUMMARY.md # 移行サマリー
 │
-├── prisma/
-│   ├── schema.prisma            # データモデル (300行)
-│   └── seed.ts                  # シードデータ (100行)
-│
-├── docs/                        # ドキュメント (11ファイル)
-│   ├── 開発要件定義書.md
-│   ├── 実装計画.md
-│   ├── QUICKSTART.md
-│   ├── OFFLINE-SUPPORT.md
-│   ├── EXPORT-GUIDE.md
-│   └── ...
-│
-├── test-api.http                # APIテスト (200行)
-├── docker-compose.yml           # Docker設定
-├── package.json                 # npm設定
-└── README.md                    # このファイル
+├── supabase-migration.sql         # データベーススキーマ
+├── package.json                   # 依存パッケージ
+└── README.md                      # このファイル
 ```
 
 ---
@@ -203,204 +154,139 @@ Password: password123
 ## 🔧 技術スタック
 
 ### フロントエンド
-- **フレームワーク**: React 18.3 + TypeScript 5.7
-- **ビルドツール**: Vite 6.3
-- **スタイリング**: Tailwind CSS 3.4
-- **UIライブラリ**: Radix UI
-- **地図**: Leaflet 1.9 + React-Leaflet 4.2
-- **日付**: react-day-picker 8.10 + date-fns 3.6
-- **ストレージ**: IndexedDB
-- **検証**: Zod
+- **React 18.3** - UI フレームワーク
+- **TypeScript 5.7** - 型安全
+- **Vite 6.3** - 高速ビルドツール
+- **Tailwind CSS 3.4** - ユーティリティファーストCSS
+- **Radix UI** - アクセシブル UI コンポーネント
+- **Leaflet** - 地図ライブラリ
+- **date-fns** - 日付処理
+- **ExcelJS** - Excel 生成
+- **Puppeteer** - PDF 生成
 
-### バックエンド
-- **ランタイム**: Node.js 20+ + TypeScript 5.7
-- **フレームワーク**: Express 4
-- **ORM**: Prisma 7
-- **データベース**: PostgreSQL 15
-- **認証**: JWT + bcrypt
-- **導出**: ExcelJS 4 + Puppeteer 23
+### バックエンド (Supabase)
+- **PostgreSQL 15** - リレーショナルデータベース
+- **PostgREST** - 自動 REST API
+- **GoTrue** - JWT 認証
+- **Row Level Security** - データ分離
 
-### DevOps
-- **コンテナ**: Docker + Docker Compose
-- **パッケージマネージャ**: npm 11
-- **ランナー**: tsx 4
-- **データベースツール**: Prisma Studio
+### ストレージ
+- **IndexedDB** - ブラウザ内オフラインストレージ
+- **Supabase Database** - クラウドストレージ
 
 ---
 
 ## 📖 ドキュメント
 
-### ユーザー向け
-- 📘 [**クイックスタートガイド**](QUICKSTART.md) - 5分で起動
-- 📗 [**オフライン機能ガイド**](OFFLINE-SUPPORT.md) - オフライン使用方法
-- 📕 [**導出機能ガイド**](EXPORT-GUIDE.md) - CSV/Excel/PDF導出
+### スタートガイド
+- 📘 **[5分クイックスタート](QUICK-START-SUPABASE.md)** - すぐに始める
+- 📗 **[Supabase セットアップ詳細](SUPABASE-SETUP.md)** - 完全ガイド
+- 📕 **[導出機能ガイド](EXPORT-GUIDE.md)** - CSV/Excel/PDF
 
-### 開発者向け
-- 📙 [**開発要件定義書**](docs/開発要件定義書.md) - 完全仕様
-- 📔 [**実装計画**](docs/実装計画.md) - 10フェーズ計画
-- 📓 [**バックエンドAPI**](README-Backend.md) - API詳細
-- 📒 [**APIテスト**](test-api.http) - REST Clientテストケース
-
-### プロジェクト管理
-- 📑 [**プロジェクト状態**](PROJECT-STATUS.md) - 進捗100%
-- 📄 [**最終リリースレポート**](FINAL-RELEASE-REPORT.md) - 完成報告
-- 📃 [**テストガイド**](TESTING.md) - テスト手順
+### 技術ドキュメント
+- 📙 **[移行サマリー](SUPABASE-MIGRATION-SUMMARY.md)** - アーキテクチャ説明
+- 📔 **[オフラインサポート](OFFLINE-SUPPORT.md)** - オフライン機能
 
 ---
 
-## 🎓 国土交通省ガイドライン準拠
+## ✨ 主要機能詳細
 
-本システムは以下の規範に完全対応：
+### 🛫 飛行記録管理
 
-### 様式1: 飛行記録
-> 「無人航空機の飛行日誌の取扱要領」様式1  
-> 飛行年月日、操縦者、機体情報、飛行目的、飛行経路、  
-> 離着陸場所・時刻、飛行時間、総飛行時間、安全影響事項等
+- **15+ フィールド**: 日時、場所、機体、操縦者、天候、目的など
+- **飛行時間自動計算**: 開始/終了時刻から自動算出
+- **地図統合**: Leaflet で場所を地図から選択
+- **リアルタイム統計**: 総飛行時間、フライト回数など
 
-### 様式2: 日常点検記録
-> 「無人航空機の飛行日誌の取扱要領」様式2  
-> 飛行前/飛行後点検、13項目（機体全般、プロペラ、  
-> フレーム、通信、推進、電源、制御、操縦、バッテリー等）
+### 👨‍✈️ 操縦者管理
 
-### 様式3: 点検整備記録
-> 「無人航空機の飛行日誌の取扱要領」様式3  
-> 定期点検・修理・改造記録、総飛行時間、作業内容、  
-> 実施理由、次回実施予定
+- **資格情報**: 免許番号、免許種別
+- **飛行時間追跡**: 初期値 + 累計飛行時間
+- **連絡先管理**: メール、電話番号
+- **アクティブ状態**: 現役/退役管理
 
-### 3年保存義務
-- `retention_until` フィールドで自動管理
-- 削除防止機能（`deleted_at` ソフトデリート）
+### 🚁 機体管理
 
----
+- **複数機体対応**: 無制限の機体登録
+- **認証管理**: 認定機/非認定機、認証番号
+- **飛行時間記録**: 総飛行時間、整備後飛行時間
+- **メーカー/モデル**: 詳細情報管理
 
-## 🔐 セキュリティ
+### 📊 統計・分析
 
-### 認証
-```typescript
-// JWT + bcrypt
-const token = jwt.sign(
-  { userId, organizationId },
-  JWT_SECRET,
-  { expiresIn: '7d' }
-);
-```
+- **リアルタイム統計**: 総飛行回数、総飛行時間
+- **チャート表示**: 月別フライト数、機体別分析
+- **フィルタリング**: 日付、操縦者、機体で絞り込み
 
-### データスコープ
-```typescript
-// 組織ごとにデータ分離
-where: {
-  organizationId: req.organizationId,
-  deletedAt: null,
-}
-```
+### 💾 オフライン優先
 
-### 3年保存
-```typescript
-// 自動設定
-const retentionUntil = new Date(flightDate);
-retentionUntil.setFullYear(retentionUntil.getFullYear() + 3);
-```
+- **完全オフライン動作**: ネットなしでも使用可能
+- **自動同期**: 接続復帰時に自動クラウド同期
+- **競合解決**: 最新データ優先
+- **同期状態表示**: オンライン/オフライン/同期中
+
+### 🔐 セキュリティ
+
+- **ユーザー認証**: メール/パスワードログイン
+- **データ分離**: RLS でユーザーごとにデータ完全分離
+- **JWT トークン**: セキュアな認証
+- **HTTPS 通信**: データ暗号化
 
 ---
 
 ## 📱 マルチデバイス対応
 
-### Web
+### デスクトップ
+- ✅ Windows 10+
+- ✅ macOS 11+
+- ✅ Linux
+
+### モバイル
+- ✅ iOS 14+ (Safari)
+- ✅ Android 8+ (Chrome)
+
+### ブラウザ
 - ✅ Chrome 90+
 - ✅ Firefox 88+
 - ✅ Safari 14+
 - ✅ Edge 90+
 
-### Android
-```kotlin
-// WebView統合例
-webView.settings.javaScriptEnabled = true
-webView.settings.domStorageEnabled = true
-```
-
-### iOS
-```swift
-// WKWebView統合例
-let config = WKWebViewConfiguration()
-config.preferences.javaScriptEnabled = true
-```
-
-### PWA対応（準備完了）
-- Service Worker実装準備完了
-- Manifestファイル準備完了
-- オフライン機能実装済み
-
 ---
 
 ## 🚀 デプロイ
 
-### フロントエンド（静的ホスティング）
+### フロントエンド
+
+**Vercel でデプロイ（推奨）**
 ```bash
 npm run build
-# → dist/ フォルダをVercel/Netlifyにデプロイ
+# Vercel にデプロイ
 ```
 
-### バックエンド（Node.jsサーバー）
+**Netlify でデプロイ**
 ```bash
-# 環境変数設定
-cp .env.example .env
-# DATABASE_URL, JWT_SECRET を設定
-
-# 起動
-npm run backend
+npm run build
+# Netlify にデプロイ
 ```
 
-### データベース（PostgreSQL）
-- **Docker**: `docker-compose up -d`
-- **クラウド**: Supabase / Neon / Railway
-- **自前**: PostgreSQL 15+
+### 環境変数設定
 
----
-
-## 🧪 テスト
-
-### 単体テスト
-```bash
-npm test
+デプロイ先で以下の環境変数を設定：
 ```
-
-### 統合テスト
-```bash
-npm run test:integration
-```
-
-### E2Eテスト
-```bash
-npm run test:e2e
-```
-
-### APIテスト（REST Client）
-```bash
-# test-api.http をVSCodeで開く
-# または
-curl -X POST http://localhost:3000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"admin@example.com","password":"password123"}'
+VITE_SUPABASE_URL=your-supabase-url
+VITE_SUPABASE_ANON_KEY=your-anon-key
 ```
 
 ---
 
-## 📊 パフォーマンス
+## 🎓 国土交通省ガイドライン対応
 
-### レスポンスタイム
-| エンドポイント | 平均 | 最大 |
-|---------------|------|------|
-| GET /flight-logs | 30ms | 100ms |
-| POST /flight-logs | 80ms | 200ms |
-| CSV導出 | 150ms | 500ms |
-| Excel導出 | 1.5s | 3s |
-| PDF導出 | 4s | 8s* |
+本システムは以下の規範に対応：
 
-*初回起動時はPuppeteer初期化で+3秒
-
-### バンドルサイズ
-- フロントエンド: ~800KB (gzip後)
-- 初回ロード: ~2秒（4G回線）
+### 飛行記録
+> 「無人航空機の飛行日誌の取扱要領」  
+> 飛行年月日、操縦者、機体情報、飛行目的、飛行経路、  
+> 離着陸場所・時刻、飛行時間、総飛行時間等
 
 ---
 
@@ -408,24 +294,17 @@ curl -X POST http://localhost:3000/api/auth/login \
 
 プルリクエスト歓迎！
 
-### 開発フロー
 1. Fork このリポジトリ
 2. Feature ブランチ作成 (`git checkout -b feature/AmazingFeature`)
 3. 変更コミット (`git commit -m 'Add some AmazingFeature'`)
 4. ブランチプッシュ (`git push origin feature/AmazingFeature`)
 5. Pull Request 作成
 
-### コーディング規約
-- TypeScript strict mode
-- ESLint + Prettier
-- Conventional Commits
-
 ---
 
 ## 📄 ライセンス
 
-このプロジェクトは MIT ライセンスの下で公開されています。  
-詳細は [LICENSE](LICENSE) ファイルをご覧ください。
+このプロジェクトは MIT ライセンスの下で公開されています。
 
 **商用利用可能** | 改変可能 | 再配布可能
 
@@ -435,66 +314,29 @@ curl -X POST http://localhost:3000/api/auth/login \
 
 ### 問題報告
 - GitHub Issues: [issues](https://github.com/your-repo/issues)
-- Email: support@example.com
 
 ### ドキュメント
 - 📚 [完全ドキュメント](docs/)
-- 🎥 [デモ動画](https://youtu.be/...)
-- 💬 [Discord](https://discord.gg/...)
-
----
-
-## 🏆 実績
-
-### 開発効率
-```
-計画開発期間: 14週間
-実際開発期間: 1日
-効率改善:     98% 短縮
-```
-
-### コード品質
-```
-TypeScript:   100% 型安全
-Lint Error:   0
-Test Coverage: 80%+
-```
-
-### ドキュメント
-```
-マークダウン: 11+ ファイル
-総行数:       4,000+ 行
-完成度:       150% （超過達成）
-```
 
 ---
 
 ## 🎉 謝辞
 
-- **Radix UI** - アクセシブルUIコンポーネント
-- **Prisma** - 次世代ORM
+- **Supabase** - 素晴らしいバックエンドプラットフォーム
+- **Radix UI** - アクセシブル UI コンポーネント
 - **Tailwind CSS** - ユーティリティファーストCSS
-- **Puppeteer** - ヘッドレスブラウザ自動化
+- **Leaflet** - オープンソース地図ライブラリ
 - **国土交通省** - ガイドライン提供
-
----
-
-## 🔗 リンク
-
-- **GitHub**: https://github.com/your-repo
-- **ドキュメント**: https://docs.your-domain.com
-- **デモ**: https://demo.your-domain.com
-- **公式サイト**: https://your-domain.com
 
 ---
 
 <div align="center">
 
-**ソラログ (SoraLog) v1.0.0-beta**
+**ソラログ (SoraLog) v1.0.0**
 
-無人航空機日誌システム | 国交省準拠 | オフライン優先 | モバイル最適化
+無人航空機日誌システム | Supabase 駆動 | オフライン優先 | クラウド同期
 
-Made with ❤️ by [Your Team]
+Made with ❤️ for Drone Pilots
 
 [⭐ Star](https://github.com/your-repo) | [📖 Docs](docs/) | [🐛 Report Bug](https://github.com/your-repo/issues)
 

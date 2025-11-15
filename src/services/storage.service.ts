@@ -2,13 +2,15 @@
 // 支持离线数据暂存和网络恢复后自动同步
 
 const DB_NAME = 'DroneLogDB';
-const DB_VERSION = 1;
+const DB_VERSION = 2; // 增加版本号以支持新的 pilots 和 uavs stores
 
 // Store names
 const STORES = {
   FLIGHT_LOGS: 'flightLogs',
   DAILY_INSPECTIONS: 'dailyInspections',
   MAINTENANCE_RECORDS: 'maintenanceRecords',
+  PILOTS: 'pilots',
+  UAVS: 'uavs',
   SYNC_QUEUE: 'syncQueue',
   METADATA: 'metadata',
 };
@@ -46,6 +48,20 @@ class StorageService {
         if (!db.objectStoreNames.contains(STORES.MAINTENANCE_RECORDS)) {
           const store = db.createObjectStore(STORES.MAINTENANCE_RECORDS, { keyPath: 'id' });
           store.createIndex('syncStatus', 'syncStatus', { unique: false });
+        }
+
+        // 飛行員
+        if (!db.objectStoreNames.contains(STORES.PILOTS)) {
+          const store = db.createObjectStore(STORES.PILOTS, { keyPath: 'id' });
+          store.createIndex('syncStatus', 'syncStatus', { unique: false });
+          store.createIndex('name', 'name', { unique: false });
+        }
+
+        // 無人機
+        if (!db.objectStoreNames.contains(STORES.UAVS)) {
+          const store = db.createObjectStore(STORES.UAVS, { keyPath: 'id' });
+          store.createIndex('syncStatus', 'syncStatus', { unique: false });
+          store.createIndex('model', 'model', { unique: false });
         }
 
         // 同期キュー
@@ -249,11 +265,15 @@ class StorageService {
     const pending = await this.getPendingSyncItems();
     const flightLogs = await this.getAll(STORES.FLIGHT_LOGS);
     const inspections = await this.getAll(STORES.DAILY_INSPECTIONS);
+    const pilots = await this.getAll(STORES.PILOTS);
+    const uavs = await this.getAll(STORES.UAVS);
 
     return {
       pendingSyncCount: pending.length,
       localFlightLogs: flightLogs.length,
       localInspections: inspections.length,
+      localPilots: pilots.length,
+      localUAVs: uavs.length,
       lastSync: await this.getMetadata('lastSyncTime'),
     };
   }

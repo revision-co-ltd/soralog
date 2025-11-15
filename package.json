@@ -1,9 +1,9 @@
 {
-      "name": "无人机飞行记录APP (コピー)",
-      "version": "0.1.0",
+      "name": "drone-flight-log-app",
+      "version": "1.0.0",
       "private": true,
+      "description": "无人机飞行记录系统 - 基于 Supabase 的离线优先应用",
       "dependencies": {
-            "@prisma/client": "^5.22.0",
             "@radix-ui/react-accordion": "^1.2.3",
             "@radix-ui/react-alert-dialog": "^1.1.6",
             "@radix-ui/react-aspect-ratio": "^1.1.2",
@@ -30,19 +30,15 @@
             "@radix-ui/react-toggle": "^1.1.2",
             "@radix-ui/react-toggle-group": "^1.1.2",
             "@radix-ui/react-tooltip": "^1.1.8",
+            "@supabase/supabase-js": "^2.81.1",
             "autoprefixer": "^10.4.22",
-            "bcrypt": "^5.1.1",
             "class-variance-authority": "^0.7.1",
             "clsx": "*",
             "cmdk": "^1.1.1",
-            "cors": "^2.8.5",
             "date-fns": "^3.6.0",
-            "dotenv": "^16.4.7",
             "embla-carousel-react": "^8.6.0",
             "exceljs": "^4.4.0",
-            "express": "^4.21.2",
             "input-otp": "^1.4.2",
-            "jsonwebtoken": "^9.0.2",
             "leaflet": "^1.9.4",
             "lucide-react": "^0.487.0",
             "next-themes": "^0.4.6",
@@ -62,26 +58,15 @@
             "vaul": "^1.1.2"
       },
       "devDependencies": {
-            "@types/bcrypt": "^5.0.2",
-            "@types/cors": "^2.8.17",
-            "@types/express": "^5.0.0",
-            "@types/jsonwebtoken": "^9.0.7",
             "@types/leaflet": "^1.9.21",
             "@types/node": "^20.10.0",
             "@vitejs/plugin-react-swc": "^3.10.2",
-            "prisma": "^5.22.0",
-            "tsx": "^4.19.2",
             "typescript": "^5.7.2",
             "vite": "6.3.5"
       },
       "scripts": {
             "dev": "vite",
             "build": "vite build",
-            "backend": "tsx backend/src/index.ts",
-            "prisma:generate": "prisma generate",
-            "prisma:migrate": "prisma migrate dev",
-            "prisma:studio": "prisma studio",
-            "prisma:seed": "tsx prisma/seed.ts",
-            "setup": "prisma generate && prisma migrate dev && prisma db seed"
+            "preview": "vite preview"
       }
 }
