@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { Clock, Plane, TrendingUp, ShieldCheck } from 'lucide-react';
 
 interface FlightLog {
@@ -141,10 +141,10 @@ export function FlightStatistics({ flights }: FlightStatisticsProps) {
                   <Pie
                     data={pieData}
                     cx="50%"
-                    cy="50%"
+                    cy="45%"
                     labelLine={false}
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    outerRadius={80}
+                    label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                    outerRadius={70}
                     fill="#8884d8"
                     dataKey="value"
                   >
@@ -153,6 +153,11 @@ export function FlightStatistics({ flights }: FlightStatisticsProps) {
                     ))}
                   </Pie>
                   <Tooltip />
+                  <Legend 
+                    verticalAlign="bottom" 
+                    height={36}
+                    wrapperStyle={{ fontSize: '12px' }}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             ) : (

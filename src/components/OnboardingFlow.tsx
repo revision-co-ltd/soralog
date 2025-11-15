@@ -38,9 +38,10 @@ interface UAV {
 interface OnboardingFlowProps {
   isOpen: boolean;
   onComplete: (pilot: Omit<Pilot, 'id'>, uav: Omit<UAV, 'id'>) => void;
+  onSkip: () => void;
 }
 
-export function OnboardingFlow({ isOpen, onComplete }: OnboardingFlowProps) {
+export function OnboardingFlow({ isOpen, onComplete, onSkip }: OnboardingFlowProps) {
   const [step, setStep] = useState(1); // 1: 欢迎, 2: 添加操纵士, 3: 添加飞机, 4: 完成
   
   // 操纵士信息
@@ -121,8 +122,8 @@ export function OnboardingFlow({ isOpen, onComplete }: OnboardingFlowProps) {
   const progress = (step / 4) * 100;
 
   return (
-    <Dialog open={isOpen} onOpenChange={() => {}}>
-      <DialogContent className="sm:max-w-[500px]" onPointerDownOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+    <Dialog open={isOpen} onOpenChange={onSkip}>
+      <DialogContent className="sm:max-w-[500px]">
         {/* 进度条 */}
         <div className="mb-4">
           <Progress value={progress} className="h-2" />
@@ -139,7 +140,7 @@ export function OnboardingFlow({ isOpen, onComplete }: OnboardingFlowProps) {
                 🎉 ソラログへようこそ！
               </DialogTitle>
               <DialogDescription className="text-base mt-4">
-                ご利用を開始する前に、基本情報を設定しましょう
+                基本情報を設定すると、よりスムーズに飛行記録を作成できます
               </DialogDescription>
             </DialogHeader>
 
@@ -152,7 +153,7 @@ export function OnboardingFlow({ isOpen, onComplete }: OnboardingFlowProps) {
                   <div>
                     <h3 className="font-medium text-blue-900">1. 操縦者登録</h3>
                     <p className="text-sm text-blue-700 mt-1">
-                      飛行記録を作成するために、最低1名の操縦者情報が必要です
+                      飛行記録作成時に自動入力されます
                     </p>
                   </div>
                 </div>
@@ -173,15 +174,20 @@ export function OnboardingFlow({ isOpen, onComplete }: OnboardingFlowProps) {
               <Alert>
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  これらの情報は後からいつでも追加・編集できます
+                  今すぐ設定しなくても、飛行記録作成時に追加できます
                 </AlertDescription>
               </Alert>
             </div>
 
-            <Button onClick={() => setStep(2)} className="w-full" size="lg">
-              <ArrowRight className="mr-2 h-5 w-5" />
-              始める
-            </Button>
+            <div className="flex flex-col gap-2">
+              <Button onClick={() => setStep(2)} className="w-full" size="lg">
+                <ArrowRight className="mr-2 h-5 w-5" />
+                今すぐ設定する
+              </Button>
+              <Button onClick={onSkip} variant="outline" className="w-full" size="lg">
+                後で設定する
+              </Button>
+            </div>
           </>
         )}
 

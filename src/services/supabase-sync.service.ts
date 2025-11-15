@@ -335,15 +335,19 @@ class SupabaseSyncService {
   }
 
   /**
-   * 保存飞行员
+   * 保存飞行员（创建）
    */
   async savePilot(data: any): Promise<string> {
     const id = data.id || this.generateId();
     const pilot = { ...data, id, syncStatus: 'pending' as const };
 
     await storageService.save(STORES.PILOTS, pilot);
+    
+    // 判断是创建还是更新
+    const isUpdate = !!data.id && !data.id.toString().startsWith('local');
+    
     await storageService.addToSyncQueue({
-      type: 'create',
+      type: isUpdate ? 'update' : 'create',
       storeName: STORES.PILOTS,
       data: pilot,
     });
@@ -356,35 +360,77 @@ class SupabaseSyncService {
   }
 
   /**
-   * 获取飞行员
+   * 更新飞行员
+   */
+  async updatePilot(id: string, updates: any): Promise<void> {
+    // 1. 更新本地数据
+    const existing = await storageService.get(STORES.PILOTS, id);
+    if (existing) {
+      const updated = { ...existing, ...updates, syncStatus: 'pending' };
+      await storageService.save(STORES.PILOTS, updated);
+    }
+
+    // 2. 添加到同步队列
+    await storageService.addToSyncQueue({
+      type: 'update',
+      storeName: STORES.PILOTS,
+      data: { id, ...updates },
+    });
+
+    // 3. 尝试同步
+    if (this.status === 'online') {
+      this.triggerSync().catch(console.error);
+    }
+  }
+
+  /**
+   * 获取飞行员（自动合并本地和云端）
    */
   async getPilots(): Promise<any[]> {
+    let cloudData: any[] = [];
+    
+    // 1. 尝试从云端获取
     if (this.status === 'online') {
       try {
-        const cloudData = await supabasePilots.getAll();
-        for (const item of cloudData) {
-          await storageService.save(STORES.PILOTS, { ...item, syncStatus: 'synced' });
-        }
-        return cloudData.map(this.convertFromSupabaseFormat);
+        cloudData = await supabasePilots.getAll();
+        console.log('☁️ 从云端获取了', cloudData.length, '个飞行员');
       } catch (error) {
         console.warn('⚠️ 云端获取飞行员失败:', error);
       }
     }
 
+    // 2. 从本地获取
     const localData = await storageService.getAll(STORES.PILOTS);
-    return localData.map(this.convertFromSupabaseFormat);
+    console.log('📦 从本地获取了', localData.length, '个飞行员');
+
+    // 3. 合并数据（去重）
+    const merged = this.mergeData(localData, cloudData, 'name');
+    
+    // 4. 更新本地缓存
+    for (const item of merged) {
+      await storageService.save(STORES.PILOTS, { 
+        ...item, 
+        syncStatus: item.id?.toString().startsWith('local') ? 'pending' : 'synced' 
+      });
+    }
+
+    return merged.map(this.convertFromSupabaseFormat);
   }
 
   /**
-   * 保存无人机
+   * 保存无人机（创建）
    */
   async saveUAV(data: any): Promise<string> {
     const id = data.id || this.generateId();
     const uav = { ...data, id, syncStatus: 'pending' as const };
 
     await storageService.save(STORES.UAVS, uav);
+    
+    // 判断是创建还是更新
+    const isUpdate = !!data.id && !data.id.toString().startsWith('local');
+    
     await storageService.addToSyncQueue({
-      type: 'create',
+      type: isUpdate ? 'update' : 'create',
       storeName: STORES.UAVS,
       data: uav,
     });
@@ -397,23 +443,61 @@ class SupabaseSyncService {
   }
 
   /**
-   * 获取无人机
+   * 更新无人机
+   */
+  async updateUAV(id: string, updates: any): Promise<void> {
+    // 1. 更新本地数据
+    const existing = await storageService.get(STORES.UAVS, id);
+    if (existing) {
+      const updated = { ...existing, ...updates, syncStatus: 'pending' };
+      await storageService.save(STORES.UAVS, updated);
+    }
+
+    // 2. 添加到同步队列
+    await storageService.addToSyncQueue({
+      type: 'update',
+      storeName: STORES.UAVS,
+      data: { id, ...updates },
+    });
+
+    // 3. 尝试同步
+    if (this.status === 'online') {
+      this.triggerSync().catch(console.error);
+    }
+  }
+
+  /**
+   * 获取无人机（自动合并本地和云端）
    */
   async getUAVs(): Promise<any[]> {
+    let cloudData: any[] = [];
+    
+    // 1. 尝试从云端获取
     if (this.status === 'online') {
       try {
-        const cloudData = await supabaseUAVs.getAll();
-        for (const item of cloudData) {
-          await storageService.save(STORES.UAVS, { ...item, syncStatus: 'synced' });
-        }
-        return cloudData.map(this.convertFromSupabaseFormat);
+        cloudData = await supabaseUAVs.getAll();
+        console.log('☁️ 从云端获取了', cloudData.length, '个无人机');
       } catch (error) {
         console.warn('⚠️ 云端获取无人机失败:', error);
       }
     }
 
+    // 2. 从本地获取
     const localData = await storageService.getAll(STORES.UAVS);
-    return localData.map(this.convertFromSupabaseFormat);
+    console.log('📦 从本地获取了', localData.length, '个无人机');
+
+    // 3. 合并数据（去重）
+    const merged = this.mergeData(localData, cloudData, 'nickname');
+    
+    // 4. 更新本地缓存
+    for (const item of merged) {
+      await storageService.save(STORES.UAVS, { 
+        ...item, 
+        syncStatus: item.id?.toString().startsWith('local') ? 'pending' : 'synced' 
+      });
+    }
+
+    return merged.map(this.convertFromSupabaseFormat);
   }
 
   // ==================== 数据格式转换 ====================
@@ -554,6 +638,48 @@ class SupabaseSyncService {
   }
 
   // ==================== 工具方法 ====================
+
+  /**
+   * 合并本地和云端数据（智能去重）
+   */
+  private mergeData(localData: any[], cloudData: any[], uniqueKey: string): any[] {
+    const merged = new Map<string, any>();
+    
+    // 1. 先添加云端数据（优先级高）
+    for (const item of cloudData) {
+      const key = item[uniqueKey] || item.id;
+      merged.set(key, { ...item, _source: 'cloud' });
+    }
+    
+    // 2. 添加本地独有数据（未同步的）
+    for (const item of localData) {
+      const key = item[uniqueKey] || item.id;
+      
+      // 如果云端没有，且是待同步的本地数据，才添加
+      if (!merged.has(key) || item.id?.toString().startsWith('local')) {
+        // 检查是否有相同名称的云端数据
+        const cloudItem = Array.from(merged.values()).find(
+          (m) => m[uniqueKey] === item[uniqueKey] && m._source === 'cloud'
+        );
+        
+        if (!cloudItem) {
+          merged.set(item.id || key, { ...item, _source: 'local' });
+        } else {
+          // 合并本地更新到云端数据（保留云端ID）
+          console.log(`🔄 合并数据: ${item[uniqueKey]}`);
+          merged.set(cloudItem.id, { 
+            ...cloudItem, 
+            ...item, 
+            id: cloudItem.id, // 保留云端ID
+            _source: 'merged' 
+          });
+        }
+      }
+    }
+    
+    // 3. 移除辅助字段
+    return Array.from(merged.values()).map(({ _source, ...item }) => item);
+  }
 
   private generateId(): string {
     return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;

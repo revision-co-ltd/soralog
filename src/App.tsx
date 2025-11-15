@@ -183,6 +183,13 @@ export default function App() {
     
     initializeApp();
   }, []);
+
+  // 🔄 监听用户登录状态变化，处理数据融合
+  useEffect(() => {
+    if (isAuthenticated && user && isDataLoaded) {
+      handleDataMergeOnLogin();
+    }
+  }, [isAuthenticated, user, isDataLoaded]);
   
   // 📥 从 Supabase/IndexedDB 加载数据
   const loadData = async () => {
@@ -207,8 +214,9 @@ export default function App() {
         uavs: uavsData.length,
       });
       
-      // 检查是否需要显示首次使用引导
-      const needsOnboarding = pilotsData.length === 0 && uavsData.length === 0;
+      // 检查是否需要显示首次使用引导（只在未跳过时显示）
+      const hasSkippedOnboarding = localStorage.getItem('onboarding_skipped') === 'true';
+      const needsOnboarding = pilotsData.length === 0 && uavsData.length === 0 && !hasSkippedOnboarding;
       if (needsOnboarding) {
         console.log('🎯 首次使用，显示引导流程');
         setShowOnboarding(true);
@@ -235,8 +243,9 @@ export default function App() {
     setUAVs(uavsData);
     setIsDataLoaded(true);
     
-    // 检查是否需要显示首次使用引导
-    const needsOnboarding = pilotsData.length === 0 && uavsData.length === 0;
+    // 检查是否需要显示首次使用引导（只在未跳过时显示）
+    const hasSkippedOnboarding = localStorage.getItem('onboarding_skipped') === 'true';
+    const needsOnboarding = pilotsData.length === 0 && uavsData.length === 0 && !hasSkippedOnboarding;
     if (needsOnboarding) {
       console.log('🎯 首次使用，显示引导流程');
       setShowOnboarding(true);
@@ -293,27 +302,25 @@ export default function App() {
       );
       if (uav) {
         const flightHours = newFlight.duration / 60;
-        const updatedUAV = {
-          ...uav,
+        const updates = {
           totalFlightHours: uav.totalFlightHours + flightHours,
           hoursSinceLastMaintenance: uav.hoursSinceLastMaintenance + flightHours
         };
-        setUAVs(prev => prev.map(u => u.id === uav.id ? updatedUAV : u));
-        // 同步到云端
-        await supabaseSyncService.saveUAV(updatedUAV);
+        setUAVs(prev => prev.map(u => u.id === uav.id ? { ...u, ...updates } : u));
+        // 使用updateUAV同步到云端
+        await supabaseSyncService.updateUAV(uav.id, updates);
       }
       
       // 🆕 Update Pilot flight hours
       const pilot = pilots.find(p => p.name === newFlight.pilot && p.isActive);
       if (pilot) {
         const flightMinutes = newFlight.duration; // 分単位
-        const updatedPilot = {
-          ...pilot,
+        const updates = {
           totalFlightHours: pilot.totalFlightHours + flightMinutes
         };
-        setPilots(prev => prev.map(p => p.id === pilot.id ? updatedPilot : p));
-        // 同步到云端
-        await supabaseSyncService.savePilot(updatedPilot);
+        setPilots(prev => prev.map(p => p.id === pilot.id ? { ...p, ...updates } : p));
+        // 使用updatePilot同步到云端
+        await supabaseSyncService.updatePilot(pilot.id, updates);
       }
       
       // 🔄 飛行記録提出後、タイマーをリセット
@@ -342,21 +349,31 @@ export default function App() {
 
   const handleUpdatePilot = async (id: string, updates: Partial<Pilot>) => {
     try {
+      // 1. 立即更新本地状态
       setPilots(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
-      await supabaseSyncService.savePilot({ id, ...updates } as any);
+      
+      // 2. 使用updatePilot方法同步到云端
+      await supabaseSyncService.updatePilot(id, updates);
       console.log('✅ 飞行员已更新:', id);
     } catch (error) {
       console.error('❌ 更新飞行员失败:', error);
+      // 回滚本地状态
+      await loadData();
     }
   };
 
   const handleDeletePilot = async (id: string) => {
     try {
+      // 1. 立即更新本地状态（软删除）
       setPilots(prev => prev.map(p => p.id === id ? { ...p, isActive: false } : p));
-      await supabaseSyncService.savePilot({ id, isActive: false } as any);
+      
+      // 2. 使用updatePilot方法同步到云端
+      await supabaseSyncService.updatePilot(id, { isActive: false });
       console.log('✅ 飞行员已删除:', id);
     } catch (error) {
       console.error('❌ 删除飞行员失败:', error);
+      // 回滚本地状态
+      await loadData();
     }
   };
 
@@ -373,21 +390,31 @@ export default function App() {
 
   const handleUpdateUAV = async (id: string, updates: Partial<UAV>) => {
     try {
+      // 1. 立即更新本地状态
       setUAVs(prev => prev.map(u => u.id === id ? { ...u, ...updates } : u));
-      await supabaseSyncService.saveUAV({ id, ...updates } as any);
+      
+      // 2. 使用updateUAV方法同步到云端
+      await supabaseSyncService.updateUAV(id, updates);
       console.log('✅ 无人机已更新:', id);
     } catch (error) {
       console.error('❌ 更新无人机失败:', error);
+      // 回滚本地状态
+      await loadData();
     }
   };
 
   const handleDeleteUAV = async (id: string) => {
     try {
+      // 1. 立即更新本地状态（软删除）
       setUAVs(prev => prev.map(u => u.id === id ? { ...u, isActive: false } : u));
-      await supabaseSyncService.saveUAV({ id, isActive: false } as any);
+      
+      // 2. 使用updateUAV方法同步到云端
+      await supabaseSyncService.updateUAV(id, { isActive: false });
       console.log('✅ 无人机已删除:', id);
     } catch (error) {
       console.error('❌ 删除无人机失败:', error);
+      // 回滚本地状态
+      await loadData();
     }
   };
 
@@ -456,12 +483,49 @@ export default function App() {
       
       // 关闭引导流程
       setShowOnboarding(false);
+      localStorage.setItem('onboarding_skipped', 'true');
       
       console.log('✅ 首次设置完成！');
-      alert('✅ 設定完了！これで飛行記録を作成できます。');
     } catch (error) {
       console.error('❌ 首次设置失败:', error);
       alert('❌ 保存に失敗しました。もう一度お試しください。');
+    }
+  };
+
+  // 🆕 跳过首次使用引导
+  const handleOnboardingSkip = () => {
+    console.log('⏭️ 引导流程已跳过');
+    setShowOnboarding(false);
+    localStorage.setItem('onboarding_skipped', 'true');
+  };
+
+  // 🔄 登录时数据融合处理
+  const handleDataMergeOnLogin = async () => {
+    // 检查是否已经执行过融合（避免重复执行）
+    const mergeKey = `data_merged_${user?.id}`;
+    if (localStorage.getItem(mergeKey) === 'true') {
+      console.log('✅ 数据已融合过，跳过');
+      return;
+    }
+
+    try {
+      console.log('🔄 开始融合本地数据到云端...');
+      
+      // 触发同步（会自动上传所有待同步的数据）
+      const result = await supabaseSyncService.triggerSync();
+      
+      if (result.success > 0) {
+        console.log(`✅ 数据融合完成！成功: ${result.success}, 失败: ${result.failed}`);
+        // 重新加载数据以获取云端的最新数据
+        await loadData();
+      } else {
+        console.log('ℹ️ 没有本地数据需要同步');
+      }
+
+      // 标记已完成融合
+      localStorage.setItem(mergeKey, 'true');
+    } catch (error) {
+      console.error('❌ 数据融合失败:', error);
     }
   };
 
@@ -895,6 +959,7 @@ export default function App() {
       <OnboardingFlow
         isOpen={showOnboarding}
         onComplete={handleOnboardingComplete}
+        onSkip={handleOnboardingSkip}
       />
     </div>
   );
