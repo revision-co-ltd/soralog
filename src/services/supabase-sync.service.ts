@@ -84,8 +84,11 @@ class SupabaseSyncService {
     supabaseAuth.onAuthStateChange((user) => {
       this.currentUserId = user?.id || null;
       if (user) {
-        console.log('👤 用户登录，触发同步');
-        this.triggerSync();
+        console.log('👤 用户登录，触发强制同步');
+        // 登录后使用强制同步，会先检查在线状态
+        this.forceSyncOnLogin().catch((error) => {
+          console.error('❌ 登录后同步失败:', error);
+        });
       }
     });
 
@@ -135,6 +138,31 @@ class SupabaseSyncService {
   }
 
   // ==================== 同步逻辑 ====================
+
+  /**
+   * 强制同步（用于登录后）- 不检查当前状态，强制尝试连接
+   */
+  async forceSyncOnLogin(): Promise<{ success: number; failed: number }> {
+    console.log('🔐 登录后强制同步...');
+    
+    if (!this.currentUserId) {
+      console.log('👤 未登录，无法同步');
+      return { success: 0, failed: 0 };
+    }
+
+    // 1. 强制检查在线状态
+    await this.checkOnlineStatus();
+    console.log(`📡 当前状态: ${this.status}`);
+    
+    // 2. 如果仍然离线，直接返回
+    if (this.status === 'offline') {
+      console.log('📴 确认离线，无法同步');
+      return { success: 0, failed: 0 };
+    }
+    
+    // 3. 在线，执行同步
+    return this.triggerSync();
+  }
 
   async triggerSync(): Promise<{ success: number; failed: number }> {
     if (this.status !== 'online') {

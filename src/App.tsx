@@ -509,15 +509,17 @@ export default function App() {
     }
 
     try {
-      console.log('🔄 开始融合本地数据到云端...');
+      console.log('🔄 登录后开始融合本地数据到云端...');
       
-      // 触发同步（会自动上传所有待同步的数据）
-      const result = await supabaseSyncService.triggerSync();
+      // 🆕 使用强制同步方法（不管当前状态，强制检查并尝试连接）
+      const result = await supabaseSyncService.forceSyncOnLogin();
       
       if (result.success > 0) {
         console.log(`✅ 数据融合完成！成功: ${result.success}, 失败: ${result.failed}`);
         // 重新加载数据以获取云端的最新数据
         await loadData();
+      } else if (result.failed > 0) {
+        console.log(`⚠️ 部分数据同步失败: ${result.failed} 条`);
       } else {
         console.log('ℹ️ 没有本地数据需要同步');
       }

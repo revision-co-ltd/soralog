@@ -298,6 +298,71 @@ const handleDataMergeOnLogin = async () => {
 2. 云端已存在同名飞行员
 3. 验证是否正确合并（保留云端ID）
 
+## 🔧 额外修复：登录后强制同步
+
+### 问题
+登录后如果同步服务处于离线状态，就不会尝试同步，必须等到下次自动同步（5分钟后）。
+
+### 解决方案
+添加 `forceSyncOnLogin()` 方法，在用户登录时强制检查在线状态并立即尝试同步。
+
+```typescript
+// supabase-sync.service.ts
+
+/**
+ * 强制同步（用于登录后）- 不检查当前状态，强制尝试连接
+ */
+async forceSyncOnLogin(): Promise<{ success: number; failed: number }> {
+  console.log('🔐 登录后强制同步...');
+  
+  if (!this.currentUserId) {
+    console.log('👤 未登录，无法同步');
+    return { success: 0, failed: 0 };
+  }
+
+  // 1. 强制检查在线状态
+  await this.checkOnlineStatus();
+  console.log(`📡 当前状态: ${this.status}`);
+  
+  // 2. 如果仍然离线，直接返回
+  if (this.status === 'offline') {
+    console.log('📴 确认离线，无法同步');
+    return { success: 0, failed: 0 };
+  }
+  
+  // 3. 在线，执行同步
+  return this.triggerSync();
+}
+```
+
+### 使用位置
+1. **App.tsx - 登录后数据融合**
+```typescript
+const handleDataMergeOnLogin = async () => {
+  // 🆕 使用强制同步方法（不管当前状态，强制检查并尝试连接）
+  const result = await supabaseSyncService.forceSyncOnLogin();
+  // ...
+};
+```
+
+2. **认证状态监听**
+```typescript
+supabaseAuth.onAuthStateChange((user) => {
+  this.currentUserId = user?.id || null;
+  if (user) {
+    console.log('👤 用户登录，触发强制同步');
+    // 登录后使用强制同步，会先检查在线状态
+    this.forceSyncOnLogin().catch(console.error);
+  }
+});
+```
+
+### 效果
+✅ 用户登录后立即检查网络状态  
+✅ 如果在线，立即同步本地数据到云端  
+✅ 不需要等待5分钟的自动同步  
+✅ 提供更好的用户体验  
+
 ## ⚠️ 注意事项
 
 1. **ID管理**：
@@ -320,6 +385,11 @@ const handleDataMergeOnLogin = async () => {
    - 离线时暂存队列
    - 恢复在线后自动重试
 
+5. **登录同步**：
+   - 登录后自动强制检查在线状态
+   - 如果在线，立即同步所有待同步数据
+   - 避免等待自动同步周期
+
 ## ✨ 功能特性
 
 ✅ **离线优先**：无网络也能正常使用
@@ -335,6 +405,10 @@ const handleDataMergeOnLogin = async () => {
 2025-11-15
 
 ## 🔧 影响文件
-- `src/services/supabase-sync.service.ts` - 核心同步逻辑
-- `src/App.tsx` - 应用层操作方法
+- `src/services/supabase-sync.service.ts` - 核心同步逻辑、强制同步方法
+- `src/App.tsx` - 应用层操作方法、登录同步处理
+
+## 🎉 修复版本
+- v1.1 (2025-11-15) - 添加登录后强制同步功能
+- v1.0 (2025-11-15) - 初始修复：区分创建/更新、智能合并
 
