@@ -31,6 +31,12 @@ interface FlightLog {
   notes: string;
   pilot: string;
   clientName?: string; // 案件名・クライアント名
+  takeoffTime?: string; // 離陸時刻 HH:mm
+  landingTime?: string; // 着陸時刻 HH:mm
+  outline?: string; // 飛行概要
+  tokuteiFlightCategories?: string[]; // 特定飛行カテゴリ
+  flightPlanNotified?: boolean; // 飛行計画の通報
+  isTokuteiFlight?: boolean; // 特定飛行フラグ
 }
 
 interface Pilot {
@@ -124,12 +130,23 @@ export default function App() {
     return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // 🆕 飛行タイマー更新ハンドラー
-  const handleFlightTimerUpdate = (status: 'ready' | 'started' | 'finished', startTime: Date | null, endTime: Date | null) => {
+  // 🆕 飛行タイマー更新ハンドラー（云端同步）
+  const handleFlightTimerUpdate = async (status: 'ready' | 'started' | 'finished', startTime: Date | null, endTime: Date | null) => {
     console.log('⏱️ handleFlightTimerUpdate:', { status, startTime, endTime });
     setGlobalFlightStatus(status);
     setGlobalStartTime(startTime);
     setGlobalEndTime(endTime);
+    
+    // 🆕 同步到云端（在线时立即同步）
+    try {
+      await supabaseSyncService.saveFlightSession({
+        status,
+        startTime,
+        endTime,
+      });
+    } catch (error) {
+      console.warn('⚠️ 飞行会话同步失败:', error);
+    }
   };
 
   // 🆕 飛行中の経過時間を更新するuseEffect
@@ -214,6 +231,24 @@ export default function App() {
         uavs: uavsData.length,
       });
       
+      // 🆕 恢复飞行会话状态（从云端或本地）
+      try {
+        const session = await supabaseSyncService.getFlightSession();
+        if (session) {
+          console.log('✈️ 恢复飞行会话状态:', session);
+          setGlobalFlightStatus(session.status);
+          setGlobalStartTime(session.startTime);
+          setGlobalEndTime(session.endTime);
+          
+          // 同步到 localStorage（用于即时恢复）
+          localStorage.setItem('flightTimerStatus', JSON.stringify(session.status));
+          localStorage.setItem('flightTimerStartTime', JSON.stringify(session.startTime?.toISOString() || null));
+          localStorage.setItem('flightTimerEndTime', JSON.stringify(session.endTime?.toISOString() || null));
+        }
+      } catch (error) {
+        console.warn('⚠️ 恢复飞行会话状态失败:', error);
+      }
+      
       // 检查是否需要显示首次使用引导（只在未跳过时显示）
       const hasSkippedOnboarding = localStorage.getItem('onboarding_skipped') === 'true';
       const needsOnboarding = pilotsData.length === 0 && uavsData.length === 0 && !hasSkippedOnboarding;
@@ -252,7 +287,7 @@ export default function App() {
     }
   };
 
-  // 💾 飛行タイマー状態を localStorage に保存
+  // 💾 飛行タイマー状態を localStorage に保存（即時復元用）
   useEffect(() => {
     console.log('💾 localStorage保存: flightTimerStatus =', globalFlightStatus);
     localStorage.setItem('flightTimerStatus', JSON.stringify(globalFlightStatus));
@@ -269,6 +304,26 @@ export default function App() {
     console.log('💾 localStorage保存: flightTimerEndTime =', value);
     localStorage.setItem('flightTimerEndTime', JSON.stringify(value));
   }, [globalEndTime]);
+
+  // 🆕 飛行タイマー状態変更時に云端に同期（デバウンス付き）
+  useEffect(() => {
+    // 初期化時はスキップ（loadData での復元と重複しないように）
+    if (!isDataLoaded) return;
+    
+    const syncTimer = setTimeout(async () => {
+      try {
+        await supabaseSyncService.saveFlightSession({
+          status: globalFlightStatus,
+          startTime: globalStartTime,
+          endTime: globalEndTime,
+        });
+      } catch (error) {
+        // 同期失敗は静かに無視（次回の同期で再試行）
+      }
+    }, 500); // 500ms デバウンス
+    
+    return () => clearTimeout(syncTimer);
+  }, [globalFlightStatus, globalStartTime, globalEndTime, isDataLoaded]);
 
   // 🔧 開発環境用: 認証トークンを自動設定
   useEffect(() => {
@@ -428,6 +483,30 @@ export default function App() {
     setSelectedFlight(null);
   };
 
+  // 🆕 飛行記録の更新処理
+  const handleUpdateFlight = async (id: string, updates: Partial<FlightLog>) => {
+    try {
+      console.log('📝 飛行記録を更新:', id, updates);
+      
+      // 1. 立即更新本地状态
+      setFlights(prev => prev.map(f => f.id === id ? { ...f, ...updates } : f));
+      
+      // 2. 更新選択中の飛行記録
+      if (selectedFlight && selectedFlight.id === id) {
+        setSelectedFlight({ ...selectedFlight, ...updates });
+      }
+      
+      // 3. 使用 supabaseSyncService 同步到云端
+      await supabaseSyncService.updateFlightLog(id, updates);
+      console.log('✅ 飛行記録の更新完了:', id);
+    } catch (error) {
+      console.error('❌ 飛行記録の更新失敗:', error);
+      // 回滚本地状态
+      await loadData();
+      alert('更新に失敗しました。もう一度お試しください。');
+    }
+  };
+
   // 🆕 日常点検記録の処理（オフライン対応）
   const handleAddDailyInspection = async (data: CreateDailyInspectionDTO) => {
     try {
@@ -450,6 +529,7 @@ export default function App() {
   // 🆕 点検整備記録の処理（オフライン対応）
   const handleAddMaintenanceRecord = async (data: any) => {
     try {
+      console.log('📝 点検整備記録を保存中...', data);
       await syncService.saveMaintenanceRecord(data);
       const isOnline = syncService.isOnline();
       
@@ -460,9 +540,10 @@ export default function App() {
       }
       
       setActiveTab('history');
-    } catch (error) {
+    } catch (error: any) {
       console.error('保存エラー:', error);
-      alert('❌ 保存に失敗しました');
+      const errorMessage = error?.message || '不明なエラー';
+      alert(`❌ 保存に失敗しました\n\nエラー: ${errorMessage}\n\n※ Supabaseのmaintenance_recordsテーブルが作成されていない可能性があります。`);
     }
   };
 
@@ -501,33 +582,31 @@ export default function App() {
 
   // 🔄 登录时数据融合处理
   const handleDataMergeOnLogin = async () => {
-    // 检查是否已经执行过融合（避免重复执行）
-    const mergeKey = `data_merged_${user?.id}`;
-    if (localStorage.getItem(mergeKey) === 'true') {
-      console.log('✅ 数据已融合过，跳过');
-      return;
-    }
-
     try {
-      console.log('🔄 登录后开始融合本地数据到云端...');
+      console.log('🔄 登录后同步数据...');
       
-      // 🆕 使用强制同步方法（不管当前状态，强制检查并尝试连接）
+      // 1. 先尝试将本地待同步数据上传到云端
       const result = await supabaseSyncService.forceSyncOnLogin();
       
       if (result.success > 0) {
-        console.log(`✅ 数据融合完成！成功: ${result.success}, 失败: ${result.failed}`);
-        // 重新加载数据以获取云端的最新数据
-        await loadData();
-      } else if (result.failed > 0) {
-        console.log(`⚠️ 部分数据同步失败: ${result.failed} 条`);
-      } else {
-        console.log('ℹ️ 没有本地数据需要同步');
+        console.log(`✅ 本地数据上传成功: ${result.success} 条`);
+      }
+      if (result.failed > 0) {
+        console.log(`⚠️ 部分数据上传失败: ${result.failed} 条`);
       }
 
-      // 标记已完成融合
-      localStorage.setItem(mergeKey, 'true');
+      // 2. 🔑 确保在线状态，准备从云端拉取
+      await supabaseSyncService.forcePullFromCloud();
+
+      // 3. 从云端拉取最新数据
+      console.log('📥 从云端拉取最新数据...');
+      await loadData();
+      console.log('✅ 云端数据同步完成！');
+      
     } catch (error) {
-      console.error('❌ 数据融合失败:', error);
+      console.error('❌ 数据同步失败:', error);
+      // 即使同步失败，也尝试加载本地数据
+      await loadData();
     }
   };
 
@@ -845,12 +924,14 @@ export default function App() {
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
               <PilotManagement 
                 pilots={pilots}
+                flights={flights}
                 onAddPilot={handleAddPilot}
                 onUpdatePilot={handleUpdatePilot}
                 onDeletePilot={handleDeletePilot}
               />
               <UAVManagement 
                 uavs={uavs}
+                flights={flights}
                 onAddUAV={handleAddUAV}
                 onUpdateUAV={handleUpdateUAV}
                 onDeleteUAV={handleDeleteUAV}
@@ -873,7 +954,10 @@ export default function App() {
         {/* 🆕 飞行状态提醒条 */}
         {globalFlightStatus === 'started' && (
           <button
-            onClick={() => setActiveTab('add')}
+            onClick={() => {
+              setActiveTab('add');
+              setRecordType('style1'); // 🆕 同时切换到飞行记录页面
+            }}
             className="w-full bg-gradient-to-r from-green-500 via-emerald-500 to-green-600 text-white px-4 py-2.5 flex items-center justify-center gap-3 hover:from-green-600 hover:via-emerald-600 hover:to-green-700 transition-all cursor-pointer active:scale-[0.99] border-b-2 border-green-700"
           >
             <div className="flex items-center gap-2">
@@ -889,7 +973,7 @@ export default function App() {
                 {formatElapsedTime(menuBarElapsedTime)}
               </span>
             </div>
-            <span className="text-xs opacity-90 hidden sm:inline">タップして詳細を確認</span>
+            <span className="text-xs opacity-90 hidden sm:inline">タップして飛行記録を確認</span>
           </button>
         )}
         <div className="max-w-7xl mx-auto">
@@ -955,6 +1039,9 @@ export default function App() {
         flight={selectedFlight}
         isOpen={isDetailModalOpen}
         onClose={handleCloseModal}
+        onUpdate={handleUpdateFlight}
+        pilots={pilots}
+        uavs={uavs}
       />
 
       {/* 🆕 首次使用引导流程 */}

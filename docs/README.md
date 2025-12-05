@@ -8,14 +8,14 @@
 
 新規ユーザーの方は、こちらから始めてください：
 
-### 1. **[QUICK-START-SUPABASE.md](../QUICK-START-SUPABASE.md)** 🔥
+### 1. **[QUICK-START-SUPABASE.md](archive/20251204_root_cleanup/QUICK-START-SUPABASE.md)** 🔥
    **5分でアプリを起動！**
    - Supabase プロジェクト作成
    - データベース構築
    - アプリ起動
    - アカウント登録
 
-### 2. **[SUPABASE-SETUP.md](../SUPABASE-SETUP.md)** 📖
+### 2. **[SUPABASE-SETUP.md](archive/20251204_root_cleanup/SUPABASE-SETUP.md)** 📖
    **詳細なセットアップガイド**
    - 環境変数の設定
    - トラブルシューティング
@@ -27,25 +27,25 @@
 
 ### 基本機能
 - **[README.md](../README.md)** - プロジェクト概要と主要機能
-- **[OFFLINE-SUPPORT.md](../OFFLINE-SUPPORT.md)** - オフライン機能の使い方
-- **[EXPORT-GUIDE.md](../EXPORT-GUIDE.md)** - CSV/Excel/PDF 導出ガイド
+- **[OFFLINE-SUPPORT.md](archive/20251204_root_cleanup/OFFLINE-SUPPORT.md)** - オフライン機能の使い方
+- **[EXPORT-GUIDE.md](archive/20251204_root_cleanup/EXPORT-GUIDE.md)** - CSV/Excel/PDF 導出ガイド
 
 ### UI/UX
-- **[UI-LANGUAGE-JAPANESE.md](../UI-LANGUAGE-JAPANESE.md)** - 日本語対応について
-- **[BRANDING.md](../BRANDING.md)** - ブランディングガイド
+- **[UI-LANGUAGE-JAPANESE.md](archive/20251204_root_cleanup/UI-LANGUAGE-JAPANESE.md)** - 日本語対応について
+- **[BRANDING.md](archive/20251204_root_cleanup/BRANDING.md)** - ブランディングガイド
 
 ---
 
 ## 🔧 開発者向け
 
 ### アーキテクチャ
-- **[SUPABASE-MIGRATION-SUMMARY.md](../SUPABASE-MIGRATION-SUMMARY.md)** - Supabase アーキテクチャ詳細
-- **[AUTH-SUMMARY.md](../AUTH-SUMMARY.md)** - 認証システム
+- **[SUPABASE-MIGRATION-SUMMARY.md](archive/20251204_root_cleanup/SUPABASE-MIGRATION-SUMMARY.md)** - Supabase アーキテクチャ詳細
+- **[AUTH-SUMMARY.md](archive/20251204_root_cleanup/AUTH-SUMMARY.md)** - 認証システム
 - **[supabase-migration.sql](../supabase-migration.sql)** - データベーススキーマ
 
 ### 開発ログ
-- **[CLEANUP-REPORT.md](../CLEANUP-REPORT.md)** - コードクリーンアップレポート
-- **[PROJECT-STATUS.md](../PROJECT-STATUS.md)** - プロジェクト状態
+- **[CLEANUP-REPORT.md](archive/20251204_root_cleanup/CLEANUP-REPORT.md)** - コードクリーンアップレポート
+- **[PROJECT-STATUS.md](archive/20251204_root_cleanup/PROJECT-STATUS.md)** - プロジェクト状態
 - **[CHANGELOG.md](../CHANGELOG.md)** - 変更履歴
 
 ---
@@ -141,7 +141,12 @@ A: `archive/` フォルダに移動されました
 
 ## 🎉 始めましょう！
 
-準備ができたら、**[QUICK-START-SUPABASE.md](../QUICK-START-SUPABASE.md)** を開いて、5分でアプリを起動しましょう！
+準備ができたら、**[QUICK-START-SUPABASE.md](archive/20251204_root_cleanup/QUICK-START-SUPABASE.md)** を開いて、5分でアプリを起動しましょう！
 
 **がんばってください！** 🚀
+
+
+
+
+
 

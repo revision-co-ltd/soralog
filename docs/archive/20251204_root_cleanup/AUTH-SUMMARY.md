@@ -398,3 +398,8 @@ CREATE POLICY "Users can delete own flight logs"
 **状态**: ✅ 完成并就绪  
 **下一步**: 配置 Supabase 并开始使用！
 
+
+
+
+
+

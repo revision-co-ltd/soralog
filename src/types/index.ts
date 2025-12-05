@@ -294,31 +294,56 @@ export interface CreateDailyInspectionDTO {
 /**
  * 点検整備記録（様式3）
  * 定期点検・修理・改造
+ * CSV字段: 点検整備ID, 作成年月日, 実施年月日, 点検整備総時間, 前回実施年月日,
+ *          実施者ID, 実施者名, ドローンID, ドローン名, ドローン登録記号,
+ *          実施場所ID, 実施場所名, 実施場所地番, 備考, 実施理由,
+ *          点検整備内容(装備品等の交換), 点検整備内容(定期点検の実施),
+ *          点検整備内容(装置等の取付け・取卸し記録), 点検整備内容(その他点検整備等)
  */
 export interface MaintenanceRecord {
-  id: string;
-  organizationId: string;
+  id: string;                          // 点検整備ID
+  organizationId?: string;
   
   // 基本情報
-  droneId: string;
-  drone?: Drone;
-  executionDate: Date;
-  totalFlightTimeAtMoment?: number;  // その時点の総飛行時間
+  createdAt: Date;                     // 作成年月日
+  updatedAt: Date;
+  executionDate: Date;                 // 実施年月日
+  totalFlightTimeAtMoment?: string;    // 点検整備総時間（その時点の総飛行時間）
+  previousExecutionDate?: Date;        // 前回実施年月日
   
-  // 作業内容
-  workContent: string;  // 点検・修理・改造及び整備の内容
-  reason?: string;  // 実施理由
-  executionPlaceId?: string;
-  executionPlace?: Location;
-  executorId: string;
-  executor?: User;
-  nextDueNote?: string;  // その他特記事項（次回実施予定等）
-  remarks?: string;  // 備考
+  // 実施者情報
+  executorId: string;                  // 実施者ID
+  executorName?: string;               // 実施者名
+  executor?: User;                     // リレーション
+  
+  // ドローン情報
+  droneId: string;                     // ドローンID
+  droneName?: string;                  // ドローン名
+  droneRegistrationMark?: string;      // ドローン登録記号（例: JU2321）
+  drone?: Drone;                       // リレーション
+  
+  // 実施場所情報
+  executionPlaceId?: string;           // 実施場所ID
+  executionPlaceName?: string;         // 実施場所名
+  executionPlaceAddress?: string;      // 実施場所地番
+  executionPlace?: Location;           // リレーション
+  
+  // 備考・理由
+  remarks?: string;                    // 備考
+  reason?: string;                     // 実施理由
+  
+  // 点検整備内容（4つのカテゴリ）
+  contentEquipmentReplacement?: string;    // 装備品等の交換
+  contentRegularInspection?: string;       // 定期点検の実施
+  contentInstallationRemoval?: string;     // 装置等の取付け・取卸し記録
+  contentOther?: string;                   // その他点検整備等
+  
+  // 後方互換性のための旧フィールド
+  workContent?: string;                // 点検・修理・改造及び整備の内容（旧）
+  nextDueNote?: string;                // その他特記事項（次回実施予定等）
   
   // システム情報
-  retentionUntil: Date;
-  createdAt: Date;
-  updatedAt: Date;
+  retentionUntil?: Date;
   deletedAt?: Date;
 }
 
@@ -326,15 +351,38 @@ export interface MaintenanceRecord {
  * 点検整備記録作成用DTO
  */
 export interface CreateMaintenanceRecordDTO {
-  droneId: string;
-  executionDate: Date;
-  totalFlightTimeAtMoment?: number;
-  workContent: string;
-  reason?: string;
-  executionPlaceId?: string;
-  executorId: string;
+  // 基本情報
+  executionDate: Date;                 // 実施年月日
+  totalFlightTimeAtMoment?: string;    // 点検整備総時間
+  previousExecutionDate?: Date;        // 前回実施年月日
+  
+  // 実施者情報
+  executorId: string;                  // 実施者ID
+  executorName?: string;               // 実施者名
+  
+  // ドローン情報
+  droneId: string;                     // ドローンID
+  droneName?: string;                  // ドローン名
+  droneRegistrationMark?: string;      // ドローン登録記号
+  
+  // 実施場所情報
+  executionPlaceId?: string;           // 実施場所ID
+  executionPlaceName?: string;         // 実施場所名
+  executionPlaceAddress?: string;      // 実施場所地番
+  
+  // 備考・理由
+  remarks?: string;                    // 備考
+  reason?: string;                     // 実施理由
+  
+  // 点検整備内容（4つのカテゴリ）
+  contentEquipmentReplacement?: string;    // 装備品等の交換
+  contentRegularInspection?: string;       // 定期点検の実施
+  contentInstallationRemoval?: string;     // 装置等の取付け・取卸し記録
+  contentOther?: string;                   // その他点検整備等
+  
+  // 後方互換性
+  workContent?: string;
   nextDueNote?: string;
-  remarks?: string;
 }
 
 // =====================================

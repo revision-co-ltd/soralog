@@ -3,10 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from './ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from './ui/dialog';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Badge } from './ui/badge';
-import { User, Plus, Edit, Trash2 } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
+import { User, Plus, Edit, Trash2, ChevronDown, ChevronRight, RotateCcw } from 'lucide-react';
 
 interface Pilot {
   id: string;
@@ -18,16 +19,24 @@ interface Pilot {
   isActive: boolean;
 }
 
+interface FlightLog {
+  id: string;
+  pilot: string;
+}
+
 interface PilotManagementProps {
   pilots: Pilot[];
+  flights?: FlightLog[];
   onAddPilot: (pilot: Omit<Pilot, 'id'>) => void;
   onUpdatePilot: (id: string, pilot: Partial<Pilot>) => void;
   onDeletePilot: (id: string) => void;
 }
 
-export function PilotManagement({ pilots, onAddPilot, onUpdatePilot, onDeletePilot }: PilotManagementProps) {
+export function PilotManagement({ pilots, flights = [], onAddPilot, onUpdatePilot, onDeletePilot }: PilotManagementProps) {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingPilot, setEditingPilot] = useState<Pilot | null>(null);
+  const [showRetired, setShowRetired] = useState(false);
+  const [deleteConfirmPilot, setDeleteConfirmPilot] = useState<Pilot | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     licenseNumber: '',
@@ -37,6 +46,16 @@ export function PilotManagement({ pilots, onAddPilot, onUpdatePilot, onDeletePil
     initialHours: 0,
     initialMinutes: 0
   });
+
+  // 检查操纵者是否有关联的飞行记录
+  const hasPilotFlights = (pilotName: string) => {
+    return flights.some(f => f.pilot === pilotName);
+  };
+
+  // 获取关联的飞行记录数量
+  const getPilotFlightCount = (pilotName: string) => {
+    return flights.filter(f => f.pilot === pilotName).length;
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -238,8 +257,8 @@ export function PilotManagement({ pilots, onAddPilot, onUpdatePilot, onDeletePil
                       <Button 
                         variant="outline" 
                         size="sm"
-                        onClick={() => onUpdatePilot(pilot.id, { isActive: false })}
-                        className="flex-1"
+                        onClick={() => setDeleteConfirmPilot(pilot)}
+                        className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -251,33 +270,45 @@ export function PilotManagement({ pilots, onAddPilot, onUpdatePilot, onDeletePil
 
             {inactivePilots.length > 0 && (
               <div>
-                <h3 className="font-medium mb-3 text-gray-500">非アクティブな操縦者</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {inactivePilots.map((pilot) => (
-                    <div key={pilot.id} className="border rounded-lg p-4 space-y-3 opacity-60">
-                      <div className="flex items-center gap-3">
-                        <Avatar>
-                          <AvatarImage src="" />
-                          <AvatarFallback>{pilot.name.slice(0, 2)}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate">{pilot.name}</p>
-                          <Badge variant="outline" className="text-xs">
-                            非アクティブ
-                          </Badge>
+                <button
+                  onClick={() => setShowRetired(!showRetired)}
+                  className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 mb-3"
+                >
+                  {showRetired ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                  退役済み操縦者 ({inactivePilots.length}名)
+                </button>
+                {showRetired && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {inactivePilots.map((pilot) => (
+                      <div key={pilot.id} className="border border-dashed rounded-lg p-4 space-y-3 bg-gray-50">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="opacity-50">
+                            <AvatarImage src="" />
+                            <AvatarFallback>{pilot.name.slice(0, 2)}</AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium truncate text-gray-600">{pilot.name}</p>
+                            <Badge variant="outline" className="text-xs text-gray-500">
+                              退役済み
+                            </Badge>
+                          </div>
                         </div>
+                        <div className="text-xs text-gray-500">
+                          飛行記録: {getPilotFlightCount(pilot.name)}件
+                        </div>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => onUpdatePilot(pilot.id, { isActive: true })}
+                          className="w-full"
+                        >
+                          <RotateCcw className="h-3 w-3 mr-1" />
+                          復元
+                        </Button>
                       </div>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => onUpdatePilot(pilot.id, { isActive: true })}
-                        className="w-full"
-                      >
-                        復元
-                      </Button>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -377,6 +408,57 @@ export function PilotManagement({ pilots, onAddPilot, onUpdatePilot, onDeletePil
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteConfirmPilot !== null} onOpenChange={() => setDeleteConfirmPilot(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {deleteConfirmPilot && hasPilotFlights(deleteConfirmPilot.name) 
+                ? '操縦者を退役させますか？' 
+                : '操縦者を削除しますか？'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteConfirmPilot && hasPilotFlights(deleteConfirmPilot.name) ? (
+                <>
+                  <span className="font-medium">{deleteConfirmPilot.name}</span> さんには 
+                  <span className="font-medium text-blue-600"> {getPilotFlightCount(deleteConfirmPilot.name)}件</span> の飛行記録があります。
+                  <br /><br />
+                  飛行記録を保持するため、完全削除はできません。
+                  「退役」状態にすると、新しい飛行記録では選択できなくなりますが、既存の記録は保持されます。
+                </>
+              ) : (
+                <>
+                  <span className="font-medium">{deleteConfirmPilot?.name}</span> さんを完全に削除します。
+                  この操作は取り消せません。
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>キャンセル</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (deleteConfirmPilot) {
+                  if (hasPilotFlights(deleteConfirmPilot.name)) {
+                    // 有飞行记录：只能退役
+                    onUpdatePilot(deleteConfirmPilot.id, { isActive: false });
+                  } else {
+                    // 没有飞行记录：真正删除
+                    onDeletePilot(deleteConfirmPilot.id);
+                  }
+                  setDeleteConfirmPilot(null);
+                }
+              }}
+              className={deleteConfirmPilot && hasPilotFlights(deleteConfirmPilot.name) 
+                ? 'bg-amber-600 hover:bg-amber-700' 
+                : 'bg-red-600 hover:bg-red-700'}
+            >
+              {deleteConfirmPilot && hasPilotFlights(deleteConfirmPilot.name) ? '退役させる' : '削除する'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

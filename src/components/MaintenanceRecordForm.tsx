@@ -1,5 +1,10 @@
 // 点検整備記録フォーム（様式3）
 // 国土交通省ガイドライン準拠
+// CSV字段: 点検整備ID, 作成年月日, 実施年月日, 点検整備総時間, 前回実施年月日,
+//          実施者ID, 実施者名, ドローンID, ドローン名, ドローン登録記号,
+//          実施場所ID, 実施場所名, 実施場所地番, 備考, 実施理由,
+//          点検整備内容(装備品等の交換), 点検整備内容(定期点検の実施),
+//          点検整備内容(装置等の取付け・取卸し記録), 点検整備内容(その他点検整備等)
 
 import React, { useState } from 'react';
 import { Button } from './ui/button';
@@ -23,7 +28,7 @@ interface MaintenanceRecordFormProps {
     totalFlightHours: number;
   }>;
   operators?: Array<{ id: string; name: string }>;
-  locations?: Array<{ id: string; name: string }>;
+  locations?: Array<{ id: string; name: string; address?: string }>;
 }
 
 // 実施理由の選択肢
@@ -105,19 +110,43 @@ export function MaintenanceRecordForm({
   locations = [],
 }: MaintenanceRecordFormProps) {
   const [formData, setFormData] = useState({
+    // 基本情報
     droneId: '',
+    droneName: '',
+    droneRegistrationMark: '',
     executionDate: new Date(),
-    totalFlightTimeAtMoment: 0,
-    workContent: '',
-    reason: '',
-    executionPlaceId: '',
+    previousExecutionDate: null as Date | null,
+    totalFlightTimeAtMoment: '',
+    
+    // 実施者情報
     executorId: '',
-    nextDueNote: '',
+    executorName: '',
+    
+    // 実施場所情報
+    executionPlaceId: '',
+    executionPlaceName: '',
+    executionPlaceAddress: '',
+    
+    // 備考・理由
+    reason: '',
     remarks: '',
+    
+    // 点検整備内容（4つのカテゴリ）
+    contentEquipmentReplacement: '',   // 装備品等の交換
+    contentRegularInspection: '',      // 定期点検の実施
+    contentInstallationRemoval: '',    // 装置等の取付け・取卸し記録
+    contentOther: '',                  // その他点検整備等
+    
+    // 後方互換性
+    workContent: '',
+    nextDueNote: '',
   });
 
   const [selectedDrone, setSelectedDrone] = useState<any>(null);
+  const [selectedOperator, setSelectedOperator] = useState<any>(null);
+  const [selectedLocation, setSelectedLocation] = useState<any>(null);
   const [showTemplates, setShowTemplates] = useState(false);
+  const [activeContentTab, setActiveContentTab] = useState<'equipment' | 'regular' | 'installation' | 'other'>('regular');
 
   const handleDroneChange = (droneId: string) => {
     const drone = drones.find((d) => d.id === droneId);
@@ -125,34 +154,110 @@ export function MaintenanceRecordForm({
     setFormData((prev) => ({
       ...prev,
       droneId,
-      totalFlightTimeAtMoment: drone?.totalFlightHours || 0,
+      droneName: drone?.name || '',
+      droneRegistrationMark: drone?.registrationMark || '',
+      totalFlightTimeAtMoment: drone ? `${Math.floor(drone.totalFlightHours)}時間${Math.round((drone.totalFlightHours % 1) * 60)}分` : '',
+    }));
+  };
+
+  const handleOperatorChange = (operatorId: string) => {
+    const operator = operators.find((o) => o.id === operatorId);
+    setSelectedOperator(operator);
+    setFormData((prev) => ({
+      ...prev,
+      executorId: operatorId,
+      executorName: operator?.name || '',
+    }));
+  };
+
+  const handleLocationChange = (locationId: string) => {
+    const location = locations.find((l) => l.id === locationId);
+    setSelectedLocation(location);
+    setFormData((prev) => ({
+      ...prev,
+      executionPlaceId: locationId,
+      executionPlaceName: location?.name || '',
+      executionPlaceAddress: location?.address || '',
     }));
   };
 
   const handleTemplateSelect = (template: typeof workTemplates[0]) => {
+    // テンプレートは「定期点検の実施」カテゴリに適用
     setFormData((prev) => ({
       ...prev,
-      workContent: template.content,
+      contentRegularInspection: template.content,
+      workContent: template.content, // 後方互換性
     }));
+    setActiveContentTab('regular');
     setShowTemplates(false);
+  };
+
+  // 点検整備内容を結合
+  const getCombinedWorkContent = (): string => {
+    const parts: string[] = [];
+    if (formData.contentEquipmentReplacement) {
+      parts.push(`【装備品等の交換】\n${formData.contentEquipmentReplacement}`);
+    }
+    if (formData.contentRegularInspection) {
+      parts.push(`【定期点検の実施】\n${formData.contentRegularInspection}`);
+    }
+    if (formData.contentInstallationRemoval) {
+      parts.push(`【装置等の取付け・取卸し記録】\n${formData.contentInstallationRemoval}`);
+    }
+    if (formData.contentOther) {
+      parts.push(`【その他点検整備等】\n${formData.contentOther}`);
+    }
+    return parts.join('\n\n') || formData.workContent;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     const dto: CreateMaintenanceRecordDTO = {
-      droneId: formData.droneId,
+      // 基本情報
       executionDate: formData.executionDate,
-      totalFlightTimeAtMoment: formData.totalFlightTimeAtMoment,
-      workContent: formData.workContent,
-      reason: formData.reason || undefined,
-      executionPlaceId: formData.executionPlaceId || undefined,
+      totalFlightTimeAtMoment: formData.totalFlightTimeAtMoment || undefined,
+      previousExecutionDate: formData.previousExecutionDate || undefined,
+      
+      // 実施者情報
       executorId: formData.executorId,
-      nextDueNote: formData.nextDueNote || undefined,
+      executorName: formData.executorName || undefined,
+      
+      // ドローン情報
+      droneId: formData.droneId,
+      droneName: formData.droneName || undefined,
+      droneRegistrationMark: formData.droneRegistrationMark || undefined,
+      
+      // 実施場所情報
+      executionPlaceId: formData.executionPlaceId || undefined,
+      executionPlaceName: formData.executionPlaceName || undefined,
+      executionPlaceAddress: formData.executionPlaceAddress || undefined,
+      
+      // 備考・理由
       remarks: formData.remarks || undefined,
+      reason: formData.reason || undefined,
+      
+      // 点検整備内容（4つのカテゴリ）
+      contentEquipmentReplacement: formData.contentEquipmentReplacement || undefined,
+      contentRegularInspection: formData.contentRegularInspection || undefined,
+      contentInstallationRemoval: formData.contentInstallationRemoval || undefined,
+      contentOther: formData.contentOther || undefined,
+      
+      // 後方互換性
+      workContent: getCombinedWorkContent() || undefined,
+      nextDueNote: formData.nextDueNote || undefined,
     };
 
     onSubmit(dto);
+  };
+
+  // 有効な点検整備内容があるかチェック
+  const hasValidContent = () => {
+    return formData.contentEquipmentReplacement || 
+           formData.contentRegularInspection || 
+           formData.contentInstallationRemoval || 
+           formData.contentOther ||
+           formData.workContent;
   };
 
   return (
@@ -228,19 +333,19 @@ export function MaintenanceRecordForm({
               {/* 総飛行時間 */}
               <div className="space-y-3 md:space-y-2">
                 <Label htmlFor="totalFlightTime">
-                  この時点での総飛行時間（時間）
+                  点検整備総時間（この時点での総飛行時間）
                 </Label>
                 <Input
                   id="totalFlightTime"
-                  type="number"
-                  step="0.1"
+                  type="text"
                   value={formData.totalFlightTimeAtMoment}
                   onChange={(e) =>
                     setFormData((prev) => ({
                       ...prev,
-                      totalFlightTimeAtMoment: parseFloat(e.target.value) || 0,
+                      totalFlightTimeAtMoment: e.target.value,
                     }))
                   }
+                  placeholder="例: 10時間30分"
                   className="h-14 md:h-10"
                 />
                 <p className="text-sm text-muted-foreground md:text-xs">
@@ -248,14 +353,26 @@ export function MaintenanceRecordForm({
                 </p>
               </div>
 
+              {/* 前回実施年月日 */}
+              <div className="space-y-3 md:space-y-2">
+                <Label htmlFor="previousExecutionDate">前回実施年月日</Label>
+                <DatePicker
+                  value={formData.previousExecutionDate || undefined}
+                  onChange={(date) => {
+                    setFormData((prev) => ({ ...prev, previousExecutionDate: date || null }));
+                  }}
+                  placeholder="前回の点検日（任意）"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-4">
               {/* 実施者 */}
               <div className="space-y-3 md:space-y-2">
                 <Label htmlFor="executorId">実施者 *</Label>
                 <Select
                   value={formData.executorId}
-                  onValueChange={(value) =>
-                    setFormData((prev) => ({ ...prev, executorId: value }))
-                  }
+                  onValueChange={handleOperatorChange}
                 >
                   <SelectTrigger className="h-14 md:h-10">
                     <SelectValue placeholder="実施者を選択" />
@@ -268,32 +385,67 @@ export function MaintenanceRecordForm({
                     ))}
                   </SelectContent>
                 </Select>
+                {formData.executorName && (
+                  <p className="text-xs text-muted-foreground">
+                    実施者名: {formData.executorName}
+                  </p>
+                )}
+              </div>
+
+              {/* 実施場所 */}
+              <div className="space-y-3 md:space-y-2">
+                <Label htmlFor="executionPlaceId">実施場所</Label>
+                {locations.length > 0 ? (
+                  <Select
+                    value={formData.executionPlaceId}
+                    onValueChange={handleLocationChange}
+                  >
+                    <SelectTrigger className="h-14 md:h-10">
+                      <SelectValue placeholder="場所を選択（任意）" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {locations.map((location) => (
+                        <SelectItem key={location.id} value={location.id}>
+                          {location.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    id="executionPlaceName"
+                    type="text"
+                    value={formData.executionPlaceName}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        executionPlaceName: e.target.value,
+                      }))
+                    }
+                    placeholder="実施場所名を入力"
+                    className="h-14 md:h-10"
+                  />
+                )}
               </div>
             </div>
 
-            {/* 実施場所（オプション） */}
-            {locations.length > 0 && (
-              <div className="space-y-3 md:space-y-2">
-                <Label htmlFor="executionPlaceId">実施場所</Label>
-                <Select
-                  value={formData.executionPlaceId}
-                  onValueChange={(value) =>
-                    setFormData((prev) => ({ ...prev, executionPlaceId: value }))
-                  }
-                >
-                  <SelectTrigger className="h-14 md:h-10">
-                    <SelectValue placeholder="場所を選択（任意）" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {locations.map((location) => (
-                      <SelectItem key={location.id} value={location.id}>
-                        {location.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+            {/* 実施場所地番（住所詳細） */}
+            <div className="space-y-3 md:space-y-2">
+              <Label htmlFor="executionPlaceAddress">実施場所地番（住所詳細）</Label>
+              <Input
+                id="executionPlaceAddress"
+                type="text"
+                value={formData.executionPlaceAddress}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    executionPlaceAddress: e.target.value,
+                  }))
+                }
+                placeholder="例: 神奈川県川崎市久本1丁目"
+                className="h-14 md:h-10"
+              />
+            </div>
           </div>
 
           <Separator />
@@ -353,39 +505,125 @@ export function MaintenanceRecordForm({
               </Select>
             </div>
 
-            {/* 作業内容 */}
+            {/* 点検整備内容（4つのカテゴリタブ） */}
             <div className="space-y-3 md:space-y-2">
-              <Label htmlFor="workContent">
-                点検・修理・改造及び整備の内容 *
-              </Label>
-              <Textarea
-                id="workContent"
-                value={formData.workContent}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, workContent: e.target.value }))
-                }
-                placeholder="実施した作業内容を詳しく記載してください&#10;&#10;例:&#10;- 定期点検を実施&#10;- プロペラ全4枚を新品に交換&#10;- 動作確認飛行を実施、異常なし"
-                rows={12}
-                className="font-mono text-sm"
-                required
-              />
+              <Label>点検、修理、改造及び整備の内容 *</Label>
+              
+              {/* タブ切り替え */}
+              <div className="flex flex-wrap gap-2 mb-3">
+                <Button
+                  type="button"
+                  variant={activeContentTab === 'equipment' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setActiveContentTab('equipment')}
+                  className={activeContentTab === 'equipment' ? 'bg-amber-600 hover:bg-amber-700' : ''}
+                >
+                  装備品等の交換
+                </Button>
+                <Button
+                  type="button"
+                  variant={activeContentTab === 'regular' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setActiveContentTab('regular')}
+                  className={activeContentTab === 'regular' ? 'bg-amber-600 hover:bg-amber-700' : ''}
+                >
+                  定期点検の実施
+                </Button>
+                <Button
+                  type="button"
+                  variant={activeContentTab === 'installation' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setActiveContentTab('installation')}
+                  className={activeContentTab === 'installation' ? 'bg-amber-600 hover:bg-amber-700' : ''}
+                >
+                  取付け・取卸し
+                </Button>
+                <Button
+                  type="button"
+                  variant={activeContentTab === 'other' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setActiveContentTab('other')}
+                  className={activeContentTab === 'other' ? 'bg-amber-600 hover:bg-amber-700' : ''}
+                >
+                  その他
+                </Button>
+              </div>
+
+              {/* 装備品等の交換 */}
+              {activeContentTab === 'equipment' && (
+                <Textarea
+                  id="contentEquipmentReplacement"
+                  value={formData.contentEquipmentReplacement}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, contentEquipmentReplacement: e.target.value }))
+                  }
+                  placeholder="装備品等の交換内容を記載&#10;&#10;例:&#10;- プロペラ全4枚を新品に交換（型番: xxx）&#10;- バッテリー交換（シリアル: xxx）&#10;- カメラジンバルモーター交換"
+                  rows={8}
+                  className="font-mono text-sm"
+                />
+              )}
+
+              {/* 定期点検の実施 */}
+              {activeContentTab === 'regular' && (
+                <Textarea
+                  id="contentRegularInspection"
+                  value={formData.contentRegularInspection}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, contentRegularInspection: e.target.value }))
+                  }
+                  placeholder="定期点検の内容を記載&#10;&#10;例:&#10;【外観点検】&#10;- 機体全般の損傷・汚れ確認&#10;- プロペラの損傷・固定状態確認&#10;&#10;【機能点検】&#10;- 通信系統の動作確認&#10;- 推進系統の動作確認"
+                  rows={8}
+                  className="font-mono text-sm"
+                />
+              )}
+
+              {/* 装置等の取付け・取卸し記録 */}
+              {activeContentTab === 'installation' && (
+                <Textarea
+                  id="contentInstallationRemoval"
+                  value={formData.contentInstallationRemoval}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, contentInstallationRemoval: e.target.value }))
+                  }
+                  placeholder="装置等の取付け・取卸し記録&#10;&#10;例:&#10;- サーマルカメラ取付け&#10;- スピーカー取卸し&#10;- 農薬散布装置の取付け"
+                  rows={8}
+                  className="font-mono text-sm"
+                />
+              )}
+
+              {/* その他点検整備等 */}
+              {activeContentTab === 'other' && (
+                <Textarea
+                  id="contentOther"
+                  value={formData.contentOther}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, contentOther: e.target.value }))
+                  }
+                  placeholder="その他の点検整備内容を記載&#10;&#10;例:&#10;- ファームウェアアップデート（v2.0.1 → v2.1.0）&#10;- キャリブレーション実施&#10;- 動作確認飛行を実施、異常なし"
+                  rows={8}
+                  className="font-mono text-sm"
+                />
+              )}
+
+              {/* 入力済みカテゴリ表示 */}
+              <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                {formData.contentEquipmentReplacement && (
+                  <span className="bg-green-100 text-green-800 px-2 py-1 rounded">✓ 装備品等の交換</span>
+                )}
+                {formData.contentRegularInspection && (
+                  <span className="bg-green-100 text-green-800 px-2 py-1 rounded">✓ 定期点検</span>
+                )}
+                {formData.contentInstallationRemoval && (
+                  <span className="bg-green-100 text-green-800 px-2 py-1 rounded">✓ 取付け・取卸し</span>
+                )}
+                {formData.contentOther && (
+                  <span className="bg-green-100 text-green-800 px-2 py-1 rounded">✓ その他</span>
+                )}
+              </div>
+
               <p className="text-sm text-muted-foreground md:text-xs">
                 ※ 実施した作業を具体的に記録してください（部品交換の場合は型番・数量も記載）
               </p>
-            </div>
-
-            {/* 次回実施予定・特記事項 */}
-            <div className="space-y-3 md:space-y-2">
-              <Label htmlFor="nextDueNote">その他特記事項（次回実施予定等）</Label>
-              <Textarea
-                id="nextDueNote"
-                value={formData.nextDueNote}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, nextDueNote: e.target.value }))
-                }
-                placeholder="次回点検予定、注意事項などを記載&#10;&#10;例:&#10;- 次回定期点検: 2025年12月（総飛行時間100時間時）&#10;- プロペラは50時間ごとに点検推奨"
-                rows={4}
-              />
             </div>
 
             {/* 備考 */}
@@ -397,8 +635,8 @@ export function MaintenanceRecordForm({
                 onChange={(e) =>
                   setFormData((prev) => ({ ...prev, remarks: e.target.value }))
                 }
-                placeholder="その他補足情報があれば記載&#10;&#10;例:&#10;- 天候: 晴れ&#10;- 整備担当者の所見など"
-                rows={3}
+                placeholder="その他補足情報があれば記載&#10;&#10;例:&#10;- 天候: 晴れ&#10;- 整備担当者の所見&#10;- 次回点検予定: 2025年12月"
+                rows={4}
               />
             </div>
           </div>
@@ -409,7 +647,7 @@ export function MaintenanceRecordForm({
               type="submit"
               size="lg"
               className="flex-1 h-14 text-base md:h-12 md:text-sm bg-amber-600 hover:bg-amber-700"
-              disabled={!formData.droneId || !formData.executorId || !formData.workContent}
+              disabled={!formData.droneId || !formData.executorId || !hasValidContent()}
             >
               <CheckCircle2 className="h-5 w-5 mr-2" />
               点検整備記録を保存
@@ -417,9 +655,9 @@ export function MaintenanceRecordForm({
           </div>
 
           {/* 必須項目の説明 */}
-          {(!formData.droneId || !formData.executorId || !formData.workContent) && (
+          {(!formData.droneId || !formData.executorId || !hasValidContent()) && (
             <p className="text-sm text-amber-600 text-center">
-              ⚠️ 必須項目をすべて入力してください
+              ⚠️ 必須項目をすべて入力してください（機体、実施者、点検整備内容）
             </p>
           )}
         </form>

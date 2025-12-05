@@ -19,6 +19,11 @@ interface FlightLog {
   pilot: string;
   clientName?: string; // 案件名・クライアント名
   isTokuteiFlight?: boolean;
+  takeoffTime?: string; // 離陸時刻 HH:mm
+  landingTime?: string; // 着陸時刻 HH:mm
+  outline?: string; // 飛行概要
+  tokuteiFlightCategories?: string[]; // 特定飛行カテゴリ
+  flightPlanNotified?: boolean; // 飛行計画の通報
 }
 
 interface FlightHistoryProps {

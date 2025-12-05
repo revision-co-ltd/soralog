@@ -1,6 +1,6 @@
 // 同期ステータスバー - オンライン/オフライン表示
 import React, { useEffect, useState } from 'react';
-import { syncService } from '../services/sync.service';
+import { supabaseSyncService } from '../services/supabase-sync.service';
 import { Wifi, WifiOff, RefreshCw, Check, AlertCircle } from 'lucide-react';
 import { Button } from './ui/button';
 
@@ -10,14 +10,13 @@ export function SyncStatusBar() {
   const [showDetails, setShowDetails] = useState(false);
 
   useEffect(() => {
-    // 初期化
-    syncService.init().then(() => {
-      setStatus(syncService.getStatus());
-      updateStats();
-    });
+    // 🔧 使用 supabaseSyncService 而不是旧的 syncService
+    // 获取当前状态
+    setStatus(supabaseSyncService.getStatus());
+    updateStats();
 
     // ステータス変更を監視
-    const unsubscribe = syncService.onStatusChange((newStatus) => {
+    const unsubscribe = supabaseSyncService.onStatusChange((newStatus) => {
       setStatus(newStatus);
       updateStats();
     });
@@ -26,12 +25,12 @@ export function SyncStatusBar() {
   }, []);
 
   const updateStats = async () => {
-    const stats = await syncService.getSyncStats();
+    const stats = await supabaseSyncService.getSyncStats();
     setSyncStats(stats);
   };
 
   const handleManualSync = async () => {
-    const result = await syncService.triggerSync();
+    const result = await supabaseSyncService.triggerSync();
     updateStats();
     
     if (result.success > 0) {

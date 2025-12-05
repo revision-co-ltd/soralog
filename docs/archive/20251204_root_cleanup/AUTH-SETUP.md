@@ -524,3 +524,8 @@ VITE_SUPABASE_ANON_KEY=你的密钥
 **版本**: 2.1.0 (with Authentication)  
 **状态**: ✅ 完成 - 可以开始使用！
 
+
+
+
+
+

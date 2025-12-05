@@ -18,9 +18,10 @@ class SyncService {
 
   // ==================== ネットワーク監視 ====================
 
-  private checkOnlineStatus() {
+  private async checkOnlineStatus() {
     const wasOnline = this.status === 'online';
-    const isOnline = navigator.onLine && this.checkApiConnection();
+    const apiAvailable = await this.checkApiConnection();
+    const isOnline = navigator.onLine && apiAvailable;
 
     if (isOnline && !wasOnline) {
       this.setStatus('online');
@@ -132,7 +133,15 @@ class SyncService {
         }
         break;
 
-      // 他のストアも同様に実装
+      case STORES.MAINTENANCE_RECORDS:
+        if (type === 'create') {
+          await apiService.maintenanceRecordApi.create(data);
+        } else if (type === 'update') {
+          await apiService.maintenanceRecordApi.update(data.id, data);
+        } else if (type === 'delete') {
+          await apiService.maintenanceRecordApi.delete(data.id);
+        }
+        break;
     }
   }
 
@@ -175,6 +184,55 @@ class SyncService {
     if (this.status === 'online') {
       this.triggerSync();
     }
+  }
+
+  /**
+   * 点検整備記録を保存
+   */
+  async saveMaintenanceRecord(data: any): Promise<string> {
+    const id = data.id || this.generateId();
+    
+    // Date オブジェクトを文字列に変換
+    const executionDateStr = data.executionDate instanceof Date 
+      ? data.executionDate.toISOString().split('T')[0]
+      : data.executionDate;
+    
+    const previousExecutionDateStr = data.previousExecutionDate instanceof Date 
+      ? data.previousExecutionDate.toISOString().split('T')[0]
+      : data.previousExecutionDate;
+    
+    const record = {
+      ...data,
+      id,
+      executionDate: executionDateStr,
+      previousExecutionDate: previousExecutionDateStr || null,
+      createdAt: data.createdAt || new Date().toISOString(),
+      syncStatus: 'pending' as const,
+    };
+
+    console.log('📝 saveMaintenanceRecord:', { id, record });
+
+    await storageService.save(STORES.MAINTENANCE_RECORDS, record);
+    console.log('💾 点検整備記録をローカルに保存しました:', id);
+
+    await storageService.addToSyncQueue({
+      type: 'create',
+      storeName: STORES.MAINTENANCE_RECORDS,
+      data: record,
+    });
+
+    if (this.status === 'online') {
+      this.triggerSync();
+    }
+
+    return id;
+  }
+
+  /**
+   * 点検整備記録を取得
+   */
+  async getMaintenanceRecords(): Promise<any[]> {
+    return storageService.getAll(STORES.MAINTENANCE_RECORDS);
   }
 
   async getFlightLogs(): Promise<any[]> {

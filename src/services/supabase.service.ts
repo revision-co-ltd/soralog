@@ -25,6 +25,11 @@ export interface Database {
         Insert: UAVInsert;
         Update: UAVUpdate;
       };
+      maintenance_records: {
+        Row: MaintenanceRecordRow;
+        Insert: MaintenanceRecordInsert;
+        Update: MaintenanceRecordUpdate;
+      };
     };
   };
 }
@@ -92,6 +97,36 @@ export interface UAVRow {
 
 export type UAVInsert = Omit<UAVRow, 'id' | 'created_at' | 'updated_at'>;
 export type UAVUpdate = Partial<UAVInsert>;
+
+// 点検整備記録（様式3）
+export interface MaintenanceRecordRow {
+  id: string;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
+  execution_date: string;                    // 実施年月日
+  total_flight_time_at_moment?: string;      // 点検整備総時間
+  previous_execution_date?: string;          // 前回実施年月日
+  executor_id?: string;                      // 実施者ID
+  executor_name?: string;                    // 実施者名
+  drone_id?: string;                         // ドローンID
+  drone_name?: string;                       // ドローン名
+  drone_registration_mark?: string;          // ドローン登録記号
+  execution_place_id?: string;               // 実施場所ID
+  execution_place_name?: string;             // 実施場所名
+  execution_place_address?: string;          // 実施場所地番
+  remarks?: string;                          // 備考
+  reason?: string;                           // 実施理由
+  content_equipment_replacement?: string;    // 装備品等の交換
+  content_regular_inspection?: string;       // 定期点検の実施
+  content_installation_removal?: string;     // 装置等の取付け・取卸し記録
+  content_other?: string;                    // その他点検整備等
+  sync_status?: 'pending' | 'synced';
+  deleted_at?: string;
+}
+
+export type MaintenanceRecordInsert = Omit<MaintenanceRecordRow, 'id' | 'created_at' | 'updated_at'>;
+export type MaintenanceRecordUpdate = Partial<MaintenanceRecordInsert>;
 
 // =====================================
 // Supabase 客户端初始化
@@ -412,6 +447,110 @@ export const supabaseUAVs = {
 };
 
 // =====================================
+// 数据库操作 - 点検整備記録（様式3）
+// =====================================
+
+export const supabaseMaintenanceRecords = {
+  /**
+   * 获取所有点検整備記録
+   */
+  getAll: async () => {
+    const { data, error } = await supabase
+      .from('maintenance_records')
+      .select('*')
+      .is('deleted_at', null)
+      .order('execution_date', { ascending: false });
+    
+    if (error) throw error;
+    return data || [];
+  },
+
+  /**
+   * 根据ドローン登録記号获取
+   */
+  getByDroneRegistrationMark: async (registrationMark: string) => {
+    const { data, error } = await supabase
+      .from('maintenance_records')
+      .select('*')
+      .eq('drone_registration_mark', registrationMark)
+      .is('deleted_at', null)
+      .order('execution_date', { ascending: false });
+    
+    if (error) throw error;
+    return data || [];
+  },
+
+  /**
+   * 根据ID获取
+   */
+  getById: async (id: string) => {
+    const { data, error } = await supabase
+      .from('maintenance_records')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  /**
+   * 创建点検整備記録
+   */
+  create: async (record: MaintenanceRecordInsert) => {
+    const { data, error } = await supabase
+      .from('maintenance_records')
+      .insert(record)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  /**
+   * 更新点検整備記録
+   */
+  update: async (id: string, updates: MaintenanceRecordUpdate) => {
+    const { data, error } = await supabase
+      .from('maintenance_records')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  /**
+   * 删除点検整備記録（软删除）
+   */
+  delete: async (id: string) => {
+    const { error } = await supabase
+      .from('maintenance_records')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id);
+    
+    if (error) throw error;
+  },
+
+  /**
+   * 订阅实时更新
+   */
+  subscribe: (callback: (payload: any) => void) => {
+    return supabase
+      .channel('maintenance_records_changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'maintenance_records' },
+        callback
+      )
+      .subscribe();
+  },
+};
+
+// =====================================
 // 连接状态检查
 // =====================================
 
@@ -433,6 +572,114 @@ export const checkSupabaseConnection = async (): Promise<boolean> => {
     console.warn('⚠️ Supabase 连接检查失败:', error);
     return false;
   }
+};
+
+// =====================================
+// 飞行会话 API（用于同步进行中的飞行状态）
+// =====================================
+
+export interface FlightSession {
+  id?: string;
+  user_id?: string;
+  status: 'ready' | 'started' | 'finished';
+  start_time?: string | null;
+  end_time?: string | null;
+  form_data?: any;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export const supabaseFlightSession = {
+  /**
+   * 获取当前用户的飞行会话
+   */
+  get: async (): Promise<FlightSession | null> => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+
+    const { data, error } = await supabase
+      .from('flight_sessions')
+      .select('*')
+      .eq('user_id', user.id)
+      .single();
+    
+    if (error) {
+      // 如果是"没有找到"错误，返回 null 而不是抛出
+      if (error.code === 'PGRST116') return null;
+      console.warn('获取飞行会话失败:', error.message);
+      return null;
+    }
+    return data;
+  },
+
+  /**
+   * 保存/更新飞行会话（upsert）
+   */
+  save: async (session: Partial<FlightSession>): Promise<FlightSession | null> => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+
+    const { data, error } = await supabase
+      .from('flight_sessions')
+      .upsert({
+        user_id: user.id,
+        status: session.status || 'ready',
+        start_time: session.start_time,
+        end_time: session.end_time,
+        form_data: session.form_data || {},
+      }, {
+        onConflict: 'user_id',
+      })
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('保存飞行会话失败:', error.message);
+      throw error;
+    }
+    return data;
+  },
+
+  /**
+   * 重置飞行会话（开始新飞行）
+   */
+  reset: async (): Promise<void> => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { error } = await supabase
+      .from('flight_sessions')
+      .upsert({
+        user_id: user.id,
+        status: 'ready',
+        start_time: null,
+        end_time: null,
+        form_data: {},
+      }, {
+        onConflict: 'user_id',
+      });
+    
+    if (error) {
+      console.error('重置飞行会话失败:', error.message);
+    }
+  },
+
+  /**
+   * 删除飞行会话
+   */
+  delete: async (): Promise<void> => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { error } = await supabase
+      .from('flight_sessions')
+      .delete()
+      .eq('user_id', user.id);
+    
+    if (error) {
+      console.error('删除飞行会话失败:', error.message);
+    }
+  },
 };
 
 // =====================================

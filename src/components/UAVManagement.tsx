@@ -5,9 +5,10 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from './ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
 import { Badge } from './ui/badge';
 import { Progress } from './ui/progress';
-import { Plane, Plus, Edit, Trash2, Clock, AlertTriangle } from 'lucide-react';
+import { Plane, Plus, Edit, Trash2, Clock, AlertTriangle, ChevronDown, ChevronRight, RotateCcw } from 'lucide-react';
 
 interface UAV {
   id: string;
@@ -23,16 +24,24 @@ interface UAV {
   isActive: boolean;
 }
 
+interface FlightLog {
+  id: string;
+  droneModel: string;
+}
+
 interface UAVManagementProps {
   uavs: UAV[];
+  flights?: FlightLog[];
   onAddUAV: (uav: Omit<UAV, 'id'>) => void;
   onUpdateUAV: (id: string, uav: Partial<UAV>) => void;
   onDeleteUAV: (id: string) => void;
 }
 
-export function UAVManagement({ uavs, onAddUAV, onUpdateUAV, onDeleteUAV }: UAVManagementProps) {
+export function UAVManagement({ uavs, flights = [], onAddUAV, onUpdateUAV, onDeleteUAV }: UAVManagementProps) {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingUAV, setEditingUAV] = useState<UAV | null>(null);
+  const [showRetired, setShowRetired] = useState(false);
+  const [deleteConfirmUAV, setDeleteConfirmUAV] = useState<UAV | null>(null);
   const [formData, setFormData] = useState({
     nickname: '',
     registrationId: '',
@@ -42,6 +51,18 @@ export function UAVManagement({ uavs, onAddUAV, onUpdateUAV, onDeleteUAV }: UAVM
     certificationNumber: '',
     certificationDate: ''
   });
+
+  // 检查机体是否有关联的飞行记录
+  const hasUAVFlights = (uav: UAV) => {
+    const displayName = `${uav.nickname} (${uav.manufacturer} ${uav.model})`;
+    return flights.some(f => f.droneModel === displayName || f.droneModel.includes(uav.nickname));
+  };
+
+  // 获取关联的飞行记录数量
+  const getUAVFlightCount = (uav: UAV) => {
+    const displayName = `${uav.nickname} (${uav.manufacturer} ${uav.model})`;
+    return flights.filter(f => f.droneModel === displayName || f.droneModel.includes(uav.nickname)).length;
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -255,8 +276,8 @@ export function UAVManagement({ uavs, onAddUAV, onUpdateUAV, onDeleteUAV }: UAVM
                           <Button 
                             variant="outline" 
                             size="sm"
-                            onClick={() => onUpdateUAV(uav.id, { isActive: false })}
-                            className="w-full sm:w-auto"
+                            onClick={() => setDeleteConfirmUAV(uav)}
+                            className="w-full sm:w-auto text-red-600 hover:text-red-700 hover:bg-red-50"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -303,32 +324,44 @@ export function UAVManagement({ uavs, onAddUAV, onUpdateUAV, onDeleteUAV }: UAVM
 
             {inactiveUAVs.length > 0 && (
               <div>
-                <h3 className="font-medium mb-3 text-gray-500">非アクティブな機体</h3>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  {inactiveUAVs.map((uav) => (
-                    <div key={uav.id} className="border rounded-lg p-4 space-y-3 opacity-60">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-medium truncate">{uav.nickname}</h4>
-                          <p className="text-sm text-gray-600 truncate">
-                            {uav.manufacturer} {uav.model}
-                          </p>
-                          <Badge variant="outline" className="text-xs mt-1">
-                            非アクティブ
-                          </Badge>
+                <button
+                  onClick={() => setShowRetired(!showRetired)}
+                  className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 mb-3"
+                >
+                  {showRetired ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                  退役済み機体 ({inactiveUAVs.length}台)
+                </button>
+                {showRetired && (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {inactiveUAVs.map((uav) => (
+                      <div key={uav.id} className="border border-dashed rounded-lg p-4 space-y-3 bg-gray-50">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-medium truncate text-gray-600">{uav.nickname}</h4>
+                            <p className="text-sm text-gray-500 truncate">
+                              {uav.manufacturer} {uav.model}
+                            </p>
+                            <Badge variant="outline" className="text-xs mt-1 text-gray-500">
+                              退役済み
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          飛行記録: {getUAVFlightCount(uav)}件 / 総飛行時間: {uav.totalFlightHours.toFixed(1)}時間
                         </div>
                         <Button 
                           variant="outline" 
                           size="sm"
                           onClick={() => onUpdateUAV(uav.id, { isActive: true })}
-                          className="flex-shrink-0"
+                          className="w-full"
                         >
+                          <RotateCcw className="h-3 w-3 mr-1" />
                           復元
                         </Button>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -425,6 +458,57 @@ export function UAVManagement({ uavs, onAddUAV, onUpdateUAV, onDeleteUAV }: UAVM
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteConfirmUAV !== null} onOpenChange={() => setDeleteConfirmUAV(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {deleteConfirmUAV && hasUAVFlights(deleteConfirmUAV) 
+                ? '機体を退役させますか？' 
+                : '機体を削除しますか？'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteConfirmUAV && hasUAVFlights(deleteConfirmUAV) ? (
+                <>
+                  <span className="font-medium">{deleteConfirmUAV.nickname}</span> には 
+                  <span className="font-medium text-blue-600"> {getUAVFlightCount(deleteConfirmUAV)}件</span> の飛行記録があります。
+                  <br /><br />
+                  飛行記録を保持するため、完全削除はできません。
+                  「退役」状態にすると、新しい飛行記録では選択できなくなりますが、既存の記録は保持されます。
+                </>
+              ) : (
+                <>
+                  <span className="font-medium">{deleteConfirmUAV?.nickname}</span> を完全に削除します。
+                  この操作は取り消せません。
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>キャンセル</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (deleteConfirmUAV) {
+                  if (hasUAVFlights(deleteConfirmUAV)) {
+                    // 有飞行记录：只能退役
+                    onUpdateUAV(deleteConfirmUAV.id, { isActive: false });
+                  } else {
+                    // 没有飞行记录：真正删除
+                    onDeleteUAV(deleteConfirmUAV.id);
+                  }
+                  setDeleteConfirmUAV(null);
+                }
+              }}
+              className={deleteConfirmUAV && hasUAVFlights(deleteConfirmUAV) 
+                ? 'bg-amber-600 hover:bg-amber-700' 
+                : 'bg-red-600 hover:bg-red-700'}
+            >
+              {deleteConfirmUAV && hasUAVFlights(deleteConfirmUAV) ? '退役させる' : '削除する'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -50,7 +50,7 @@ VITE_SUPABASE_URL=your-project-url
 VITE_SUPABASE_ANON_KEY=your-anon-key
 ```
 
-詳細は → **[QUICK-START-SUPABASE.md](QUICK-START-SUPABASE.md)** 📘
+詳細は → **[QUICK-START-SUPABASE.md](docs/archive/20251204_root_cleanup/QUICK-START-SUPABASE.md)** 📘
 
 ### ステップ 2: アプリ起動
 
@@ -140,9 +140,9 @@ npm run dev
 │   └── App.tsx                    # メインアプリ
 │
 ├── docs/                          # ドキュメント
-│   ├── QUICK-START-SUPABASE.md    # 🔥 5分スタートガイド
-│   ├── SUPABASE-SETUP.md          # 詳細セットアップ
-│   └── SUPABASE-MIGRATION-SUMMARY.md # 移行サマリー
+│   ├── archive/                   # アーカイブされたドキュメント
+│   │   └── ...                    # 旧ドキュメント
+│   └── README.md                  # ドキュメントインデックス
 │
 ├── supabase-migration.sql         # データベーススキーマ
 ├── package.json                   # 依存パッケージ
@@ -179,13 +179,13 @@ npm run dev
 ## 📖 ドキュメント
 
 ### スタートガイド
-- 📘 **[5分クイックスタート](QUICK-START-SUPABASE.md)** - すぐに始める
-- 📗 **[Supabase セットアップ詳細](SUPABASE-SETUP.md)** - 完全ガイド
-- 📕 **[導出機能ガイド](EXPORT-GUIDE.md)** - CSV/Excel/PDF
+- 📘 **[5分クイックスタート](docs/archive/20251204_root_cleanup/QUICK-START-SUPABASE.md)** - すぐに始める
+- 📗 **[Supabase セットアップ詳細](docs/archive/20251204_root_cleanup/SUPABASE-SETUP.md)** - 完全ガイド
+- 📕 **[導出機能ガイド](docs/archive/20251204_root_cleanup/EXPORT-GUIDE.md)** - CSV/Excel/PDF
 
 ### 技術ドキュメント
-- 📙 **[移行サマリー](SUPABASE-MIGRATION-SUMMARY.md)** - アーキテクチャ説明
-- 📔 **[オフラインサポート](OFFLINE-SUPPORT.md)** - オフライン機能
+- 📙 **[移行サマリー](docs/archive/20251204_root_cleanup/SUPABASE-MIGRATION-SUMMARY.md)** - アーキテクチャ説明
+- 📔 **[オフラインサポート](docs/archive/20251204_root_cleanup/OFFLINE-SUPPORT.md)** - オフライン機能
 
 ---
 

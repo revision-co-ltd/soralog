@@ -13,7 +13,7 @@ import { Avatar, AvatarFallback } from './ui/avatar';
 import { User, LogOut, Settings, Database, Cloud, CloudOff, Wifi, WifiOff, RefreshCw, AlertCircle, Check } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { AuthModal } from './AuthModal';
-import { syncService } from '../services/sync.service';
+import { supabaseSyncService } from '../services/supabase-sync.service';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,14 +43,12 @@ export function UserMenu({ syncStatus = 'offline' }: UserMenuProps) {
   const [showSyncDetails, setShowSyncDetails] = useState(false);
 
   useEffect(() => {
-    // 初期化
-    syncService.init().then(() => {
-      setStatus(syncService.getStatus());
-      updateStats();
-    });
+    // 🔧 使用 supabaseSyncService 获取状态
+    setStatus(supabaseSyncService.getStatus());
+    updateStats();
 
     // ステータス変更を監視
-    const unsubscribe = syncService.onStatusChange((newStatus) => {
+    const unsubscribe = supabaseSyncService.onStatusChange((newStatus) => {
       setStatus(newStatus);
       updateStats();
     });
@@ -58,13 +56,20 @@ export function UserMenu({ syncStatus = 'offline' }: UserMenuProps) {
     return () => unsubscribe();
   }, []);
 
+  // 同步状态来自 props 时也更新
+  useEffect(() => {
+    if (syncStatus !== status) {
+      setStatus(syncStatus);
+    }
+  }, [syncStatus]);
+
   const updateStats = async () => {
-    const stats = await syncService.getSyncStats();
+    const stats = await supabaseSyncService.getSyncStats();
     setSyncStats(stats);
   };
 
   const handleManualSync = async () => {
-    const result = await syncService.triggerSync();
+    const result = await supabaseSyncService.triggerSync();
     updateStats();
     
     if (result.success > 0) {

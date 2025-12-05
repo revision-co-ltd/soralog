@@ -614,8 +614,20 @@ export const downloadBlob = (blob: Blob, filename: string) => {
  * API が利用可能かチェック
  */
 export const checkApiHealth = async (): Promise<boolean> => {
+  // 環境変数で API ベースURL が設定されていない場合は
+  // 「バックエンド未使用」とみなし、実際の HTTP リクエストを飛ばさない
+  const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL as string | undefined;
+
+  if (!configuredBaseUrl) {
+    // バックエンド無しモード: 常にオフライン扱い
+    return false;
+  }
+
+  // `/api` or `/api/` を取り除いてヘルスチェック用のルートURLを計算
+  const apiRoot = configuredBaseUrl.replace(/\/api\/?$/, '');
+
   try {
-    const response = await fetch(`${API_BASE_URL.replace('/api', '')}/health`);
+    const response = await fetch(`${apiRoot}/health`);
     return response.ok;
   } catch {
     return false;
