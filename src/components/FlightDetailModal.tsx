@@ -8,7 +8,17 @@ import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { DatePicker } from './ui/date-picker';
-import { Calendar, Clock, MapPin, User, Plane, Target, FileText, ShieldCheck, Edit, Save, X, ChevronDown } from 'lucide-react';
+import { Calendar, Clock, MapPin, User, Plane, Target, FileText, ShieldCheck, Edit, Save, X, ChevronDown, Trash2 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from './ui/alert-dialog';
 
 interface FlightLog {
   id: string;
@@ -47,13 +57,15 @@ interface FlightDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   onUpdate?: (id: string, updates: Partial<FlightLog>) => void;
+  onDelete?: (id: string) => void;
   pilots?: Pilot[];
   uavs?: UAV[];
 }
 
-export function FlightDetailModal({ flight, isOpen, onClose, onUpdate, pilots = [], uavs = [] }: FlightDetailModalProps) {
+export function FlightDetailModal({ flight, isOpen, onClose, onUpdate, onDelete, pilots = [], uavs = [] }: FlightDetailModalProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState<Partial<FlightLog>>({});
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Reset edit state when flight changes or modal closes
   useEffect(() => {
@@ -154,6 +166,7 @@ export function FlightDetailModal({ flight, isOpen, onClose, onUpdate, pilots = 
   };
 
   return (
+    <>
     <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent 
         side="bottom" 
@@ -170,16 +183,31 @@ export function FlightDetailModal({ flight, isOpen, onClose, onUpdate, pilots = 
               <Plane className="h-5 w-5 text-blue-600" />
               {isEditing ? '記録を編集' : 'フライト詳細'}
             </SheetTitle>
-            {onUpdate && !isEditing && (
-              <Button
-                variant="default"
-                size="sm"
-                onClick={() => setIsEditing(true)}
-                className="gap-1.5 bg-blue-600 hover:bg-blue-700"
-              >
-                <Edit className="h-4 w-4" />
-                編集
-              </Button>
+            {!isEditing && (
+              <div className="flex gap-2">
+                {onDelete && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="gap-1.5 text-red-600 border-red-300 hover:bg-red-50 hover:border-red-400"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    削除
+                  </Button>
+                )}
+                {onUpdate && (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => setIsEditing(true)}
+                    className="gap-1.5 bg-blue-600 hover:bg-blue-700"
+                  >
+                    <Edit className="h-4 w-4" />
+                    編集
+                  </Button>
+                )}
+              </div>
             )}
           </div>
           <SheetDescription className="text-xs">
@@ -540,5 +568,43 @@ export function FlightDetailModal({ flight, isOpen, onClose, onUpdate, pilots = 
         )}
       </SheetContent>
     </Sheet>
+
+    {/* 削除確認ダイアログ */}
+    <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle className="flex items-center gap-2 text-red-600">
+            <Trash2 className="h-5 w-5" />
+            飛行記録を削除しますか？
+          </AlertDialogTitle>
+          <AlertDialogDescription className="space-y-2">
+            <p>この操作は取り消せません。以下の飛行記録が完全に削除されます：</p>
+            {flight && (
+              <div className="bg-gray-50 p-3 rounded-lg text-sm space-y-1">
+                <p><strong>日付:</strong> {formatDate(flight.date)}</p>
+                <p><strong>場所:</strong> {flight.location}</p>
+                <p><strong>機体:</strong> {flight.droneModel}</p>
+                <p><strong>操縦者:</strong> {flight.pilot}</p>
+              </div>
+            )}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>キャンセル</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={() => {
+              if (onDelete && flight) {
+                onDelete(flight.id);
+                setShowDeleteConfirm(false);
+              }
+            }}
+            className="bg-red-600 hover:bg-red-700"
+          >
+            削除する
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }

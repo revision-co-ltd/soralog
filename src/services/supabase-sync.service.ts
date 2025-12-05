@@ -426,19 +426,34 @@ class SupabaseSyncService {
    * 删除飞行记录（离线优先）
    */
   async deleteFlightLog(id: string): Promise<void> {
+    console.log('🗑️ deleteFlightLog 开始:', { id, status: this.status });
+    
     // 1. 从本地删除
     await storageService.delete(STORES.FLIGHT_LOGS, id);
+    console.log('💾 本地数据已删除');
 
-    // 2. 添加到同步队列
-    await storageService.addToSyncQueue({
-      type: 'delete',
-      storeName: STORES.FLIGHT_LOGS,
-      data: { id },
-    });
-
-    // 3. 尝试同步
-    if (this.status === 'online') {
-      this.triggerSync().catch(console.error);
+    // 2. 如果在线，立即同步到云端
+    if (this.status === 'online' && this.currentUserId) {
+      try {
+        console.log('☁️ 立即从云端删除...');
+        await supabaseFlightLogs.delete(id);
+        console.log('✅ 云端删除成功');
+      } catch (error) {
+        console.error('❌ 云端删除失败，添加到队列:', error);
+        await storageService.addToSyncQueue({
+          type: 'delete',
+          storeName: STORES.FLIGHT_LOGS,
+          data: { id },
+        });
+      }
+    } else {
+      // 离线状态，添加到同步队列
+      console.log('📴 离线状态，添加到同步队列');
+      await storageService.addToSyncQueue({
+        type: 'delete',
+        storeName: STORES.FLIGHT_LOGS,
+        data: { id },
+      });
     }
   }
 

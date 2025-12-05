@@ -507,6 +507,29 @@ export default function App() {
     }
   };
 
+  // 🆕 飛行記録の削除処理
+  const handleDeleteFlight = async (id: string) => {
+    try {
+      console.log('🗑️ 飛行記録を削除:', id);
+      
+      // 1. 立即更新本地状态
+      setFlights(prev => prev.filter(f => f.id !== id));
+      
+      // 2. 关闭详情弹窗
+      setIsDetailModalOpen(false);
+      setSelectedFlight(null);
+      
+      // 3. 使用 supabaseSyncService 删除
+      await supabaseSyncService.deleteFlightLog(id);
+      console.log('✅ 飛行記録の削除完了:', id);
+    } catch (error) {
+      console.error('❌ 飛行記録の削除失敗:', error);
+      // 回滚本地状态
+      await loadData();
+      alert('削除に失敗しました。もう一度お試しください。');
+    }
+  };
+
   // 🆕 日常点検記録の処理（オフライン対応）
   const handleAddDailyInspection = async (data: CreateDailyInspectionDTO) => {
     try {
@@ -1040,6 +1063,7 @@ export default function App() {
         isOpen={isDetailModalOpen}
         onClose={handleCloseModal}
         onUpdate={handleUpdateFlight}
+        onDelete={handleDeleteFlight}
         pilots={pilots}
         uavs={uavs}
       />
